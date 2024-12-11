@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using FinalProject.EF;
 using FinalProject.Core;
 using FinalProject.EF.Migrations;
+using Microsoft.AspNetCore.Authorization;
 
 
 namespace FinalProject.Api.Controllers
@@ -24,8 +25,9 @@ namespace FinalProject.Api.Controllers
             _unitOfWork = unitOfWork;
         }
 
-        // POST: api/Employee/Create_Employee
-        [HttpPost("/Create_Employee")]
+		// POST: api/Employee/Create_Employee
+		[Authorize(Roles = "Admin")]
+		[HttpPost("/Create_Employee")]
         public async Task<IActionResult> Create(EmployeeCreateDto employeeDto)
         {
             var employee = new Employee()
@@ -45,8 +47,8 @@ namespace FinalProject.Api.Controllers
             await _unitOfWork.CompleteAsync();
             return Ok(employee);
         }
-
-        [HttpPost("/Upload_CV")]
+		[Authorize(Roles = "Admin, Doctor")]
+		[HttpPost("/Upload_CV")]
         public async Task<IActionResult> UploadCV( int employeeId , IFormFile CVFile)
         {
             var employee = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == employeeId);
@@ -68,8 +70,9 @@ namespace FinalProject.Api.Controllers
                 
         }
 
-        // GET: api/Employee/Get_Employee_By_Id/{id}
-        [HttpGet("/Get_Employee_By_Id/{id}")]
+		// GET: api/Employee/Get_Employee_By_Id/{id}
+		[Authorize(Roles = "Admin, Doctor")]
+		[HttpGet("/Get_Employee_By_Id/{id}")]
         public async Task<IActionResult> Get(int id)
         {
             Employee employee =await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == id, new[] { "Department" , "Unit" });
@@ -80,8 +83,9 @@ namespace FinalProject.Api.Controllers
             return Ok(employee);
         }
 
-        // GET: api/Employee/Get_All_Employees
-        [HttpGet("/Get_All_Employees")]
+		// GET: api/Employee/Get_All_Employees
+		[Authorize(Roles = "Admin, Doctor")]
+		[HttpGet("/Get_All_Employees")]
         public async Task<IActionResult> GetAll()
         {
             IEnumerable<Employee> employees =await _unitOfWork.Employees.GetAllAsync(null,new[] { "Department" , "Unit" });
@@ -91,8 +95,9 @@ namespace FinalProject.Api.Controllers
             return Ok(employees);
         }
 
-        // PUT: api/Employee/Update_Employee
-        [HttpPut("/Update_Employee")]
+		// PUT: api/Employee/Update_Employee
+		[Authorize(Roles = "Admin")]
+		[HttpPut("/Update_Employee")]
         public async Task<IActionResult> Update(EmployeeUpdateDto employeeDto)
         {
             Employee employee =await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == employeeDto.EmployeeId, new[] { "Department" });
@@ -120,8 +125,9 @@ namespace FinalProject.Api.Controllers
             return Ok(employee);
         }
 
-        // DELETE: api/Employee/Delete_Employee/{id}
-        [HttpDelete("/Delete_Employee/{id}")]
+		// DELETE: api/Employee/Delete_Employee/{id}
+		[Authorize(Roles = "Admin")]
+		[HttpDelete("/Delete_Employee/{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             Employee employee =await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == id, new[] { "Department" });

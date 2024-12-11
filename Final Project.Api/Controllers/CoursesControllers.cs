@@ -11,6 +11,7 @@ using FinalProject.EF.Migrations;
 using System.Collections.Generic;
 using FinalProject.EF;
 using FinalProject.Core;
+using Microsoft.AspNetCore.Authorization;
 namespace FinalProject.Api.Controllers
 {
     [Route("api/[controller]")]
@@ -24,8 +25,9 @@ namespace FinalProject.Api.Controllers
             _unitOfWork = unitOfWork;
         }
 
-        // POST: api/Course/Create_Course
-        [HttpPost("/Create_Course")]
+		// POST: api/Course/Create_Course
+		[Authorize(Roles = "Admin")]
+		[HttpPost("/Create_Course")]
         public async Task<IActionResult> Create(CreateCourseDto courseDto)
         {
             Course course = new Course()
@@ -64,8 +66,9 @@ namespace FinalProject.Api.Controllers
             return Ok(courses);
         }
 
-        // PUT: api/Course/Update_Course
-        [HttpPut("/Update_Course")]
+		// PUT: api/Course/Update_Course
+		[Authorize(Roles = "Admin")]
+		[HttpPut("/Update_Course")]
         public async Task<IActionResult> Update(UpdateCourseDto courseDto)
         {
             var course = await _unitOfWork.Courses.GetByIdAsync(c => c.CourseId == courseDto.CourseId, new[] { "Department" })
@@ -91,8 +94,9 @@ namespace FinalProject.Api.Controllers
             return Ok(course);
         }
 
-        // DELETE: api/Course/Delete_Course/{id}
-        [HttpDelete("/Delete_Course/{id}")]
+		// DELETE: api/Course/Delete_Course/{id}
+		[Authorize(Roles = "Admin")]
+		[HttpDelete("/Delete_Course/{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             Course course =await _unitOfWork.Courses.GetByIdAsync(c => c.CourseId == id, new[] { "Department" });

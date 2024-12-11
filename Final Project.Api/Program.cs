@@ -8,13 +8,16 @@ using FinalProject.Api;
 using FinalProject.Core.IRepositories;
 using FinalProject.Core;
 using Microsoft.AspNetCore.Identity;
+using FinalProject.EF.Identity;
+using DiabetesApp.Core.Service.Contract;
+using DiabetesApp.Service;
 
 
 namespace FinalProject.Api
 {
     public class Program
     {//dev
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             //step1
             var builder = WebApplication.CreateBuilder(args);
@@ -90,6 +93,7 @@ namespace FinalProject.Api
 				options.Password.RequiredLength = 6;
 
 			});
+			builder.Services.AddScoped<ITokentService, TokentService>();
 
 
 
@@ -97,9 +101,27 @@ namespace FinalProject.Api
 
 			//builder.Services.AddScoped<IWebHostEnvironment>();
 			var app = builder.Build();
+			using var scope = app.Services.CreateScope();
+			var service = scope.ServiceProvider;
+			var loggerFactory = service.GetRequiredService<ILoggerFactory>();
 
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+			try
+			{
+				var userManger = service.GetRequiredService<UserManager<IdentityUser>>();
+				var roleManger = service.GetRequiredService<RoleManager<IdentityRole>>();
+				await AppIdentityDbContextSeeding.SeedingIdentityAsync(userManger, roleManger);
+
+			}
+			catch (Exception ex)
+			{
+				var logger = loggerFactory.CreateLogger<Program>();
+				logger.LogError(ex, "error when appling migration");
+
+			}
+
+
+			// Configure the HTTP request pipeline.
+			if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();

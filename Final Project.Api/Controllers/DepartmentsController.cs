@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
 using FinalProject.EF;
 using FinalProject.Core;
+using Microsoft.AspNetCore.Authorization;
 namespace FinalProject.Api.Controllers
 {
     [Route("api/[controller]")]
@@ -26,8 +27,9 @@ namespace FinalProject.Api.Controllers
             _unitOfWork = unitOfWork;
         }
 
-        // POST: api/Department/Create_Department
-        [HttpPost("/Create_Department")]
+		// POST: api/Department/Create_Department
+		[Authorize(Roles = "Admin")]
+		[HttpPost("/Create_Department")]
         public async Task<IActionResult> Create(CreateDepartmentDto departmentDto)
         {
             Department department = new Department()
@@ -66,8 +68,9 @@ namespace FinalProject.Api.Controllers
             return Ok(departments);
         }
 
-        // PUT: api/Department/Update_Department
-        [HttpPut("/Update_Department")]
+		// PUT: api/Department/Update_Department
+		[Authorize(Roles = "Admin")]
+		[HttpPut("/Update_Department")]
         public async Task<IActionResult> Update(UpdateDepartmentDto departmentDto)
         {
             var department =await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == departmentDto.DepartmentId, new[] { "College" });
@@ -93,8 +96,8 @@ namespace FinalProject.Api.Controllers
             await _unitOfWork.CompleteAsync();
             return Ok(department);
         }
-
-        [HttpPut("/Add_Emloyee_To_Departmet")]
+		[Authorize(Roles = "Admin")]
+		[HttpPut("/Add_Emloyee_To_Departmet")]
         public async Task<IActionResult> AddEmployeeToDepartment(AddEmplyeeToDepartment AddEmployeeDto)
         {
 
@@ -114,8 +117,8 @@ namespace FinalProject.Api.Controllers
 
         }
 
-
-        [HttpPut("/Remove_Emloyee_From_Department")]
+		[Authorize(Roles = "Admin")]
+		[HttpPut("/Remove_Emloyee_From_Department")]
         public async Task<IActionResult> RemoveEmployeeFromDepartment(AddEmplyeeToDepartment AddEmployeeDto)
         {
             var employee = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == AddEmployeeDto.EmployeeId);
@@ -134,8 +137,9 @@ namespace FinalProject.Api.Controllers
 
         }
 
-        // DELETE: api/Department/Delete_Department/{id}
-        [HttpDelete("/Delete_Department/{id}")]
+		// DELETE: api/Department/Delete_Department/{id}
+		[Authorize(Roles = "Admin")]
+		[HttpDelete("/Delete_Department/{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             Department department =await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == id, new[] { "College" });
