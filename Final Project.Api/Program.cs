@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using FinalProject.EF.Identity;
 using DiabetesApp.Core.Service.Contract;
 using DiabetesApp.Service;
+using FinalProject.Core.Models.identity;
 
 
 namespace FinalProject.Api
@@ -82,7 +83,7 @@ namespace FinalProject.Api
            
             builder.Services.AddScoped<IQualityRepository, QualityRepositoryImp>();
 
-			builder.Services.AddIdentity<IdentityUser, IdentityRole>()
+			builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
 				.AddEntityFrameworkStores<ApplicationDbContext>();
 			builder.Services.Configure<IdentityOptions>(options =>
 			{
@@ -107,7 +108,7 @@ namespace FinalProject.Api
 
 			try
 			{
-				var userManger = service.GetRequiredService<UserManager<IdentityUser>>();
+				var userManger = service.GetRequiredService<UserManager<ApplicationUser>>();
 				var roleManger = service.GetRequiredService<RoleManager<IdentityRole>>();
 				await AppIdentityDbContextSeeding.SeedingIdentityAsync(userManger, roleManger);
 

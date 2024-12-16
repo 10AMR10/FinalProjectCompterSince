@@ -7,16 +7,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 
 namespace FinalProject.EF.RepositoriesImplementation
 {
-    public class CourseRepositoryImp : BaseRepositoryImp<Course>, ICourseRepository
-    {
-        public CourseRepositoryImp(ApplicationDbContext context) : base(context)
-        {
+	public class CourseRepositoryImp : BaseRepositoryImp<Course>, ICourseRepository
+	{
+		private readonly ApplicationDbContext _context;
+		public CourseRepositoryImp(ApplicationDbContext context) : base(context)
+		{
+			_context = context;
+		}
 
-        }
-
-
-    }
+	}
 }

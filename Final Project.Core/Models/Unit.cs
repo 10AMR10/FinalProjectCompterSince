@@ -10,10 +10,11 @@ namespace FinalProject.Core.Models
     {
         public int UnitId { get; set; }
         public string Name { get; set; }
-        public string Description { get; set; }
-
-        public Employee? Head_Of_Unit { get; set; }
-
-        public ICollection<Employee>? Employees { get; set; }
-    }
+        public string ArabicName { get; set; }
+		public string ArabicDescription { get; set; }
+		public string Description { get; set; }
+        public ICollection<UnitCourses> unitCourses { get; set; } = new HashSet<UnitCourses>();
+        
+        public ICollection<UnitEmployees>? UnitEmployees { get; set; } = new HashSet<UnitEmployees>();
+	}
 }

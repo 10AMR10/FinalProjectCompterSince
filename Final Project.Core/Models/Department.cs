@@ -12,13 +12,12 @@ namespace FinalProject.Core.Models
     {
         public int DepartmentId { get; set; }
         public string Name { get; set; }
-        public string Description { get; set; }
+        public string ArabicName { get; set; }
+		public string ArabicDescription { get; set; }
+		public string Description { get; set; }
 
-        
 
-        //[ForeignKey ("Head_Of_Department")]
-        //public int Head_Of_DepartmentEmployeeId { get; set; }
-        public Employee? Head_Of_Department { get; set; }
+		public Employee? Head_Of_Department { get; set; }
 
         public ICollection<Employee>? Employees { get; set; }
 

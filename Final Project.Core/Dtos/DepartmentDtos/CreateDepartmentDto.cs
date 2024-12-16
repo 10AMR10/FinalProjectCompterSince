@@ -10,9 +10,11 @@ namespace FinalProject.Core.Dtos.DepartmentDtos
     {
         //public int DepartmentId { get; set; }
         public string Name { get; set; }
-        public string Description { get; set; }
-        public int CollegeId { get; set; }
-        public int HeadOfDepartmentId { get; set; }
+        public string ArabicName { get; set; }
+		public string Description { get; set; }
+		public string ArabicDescription { get; set; }
+
+		public int HeadOfDepartmentId { get; set; }
         //public int EmployeeCount { get; set; }
         //public int CourseCount { get; set; }
     }

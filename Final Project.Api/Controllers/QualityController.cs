@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using FinalProject.EF;
 using FinalProject.Core;
     using FinalProject.EF.Migrations;
+using Microsoft.AspNetCore.Authorization;
 namespace FinalProject.Api.Controllers
 
 {
@@ -25,76 +26,128 @@ namespace FinalProject.Api.Controllers
         {
             _unitOfWork = unitOfWork;
         }
-
-        [HttpPost("/Add_Quality")]
-        public async Task<IActionResult> Create(AddQualityDto QualityDto)
+		[Authorize(Roles = "Admin")]
+		[HttpPost("/Add_Quality")]
+        public async Task<ActionResult<bool>> Create(AddQualityDto QualityDto)
         {
-            var Quality = new Core.Models.Quality()
+            var Quality = new Quality()
             {
                 Name = QualityDto.Name,
+                ArabicDescription=QualityDto.Description,
+                ArabicName=QualityDto.Name,
                 Description = QualityDto.Description,
             };
-            var QualityAdded = await _unitOfWork.Qualities.AddAsync(Quality);
-            if (QualityAdded == null)
-                return BadRequest("Bad Request");
-
-
-            await _unitOfWork.CompleteAsync();
-            return Ok(Quality);
+            await _unitOfWork.Qualities.AddAsync(Quality);
+           
+			int res = await _unitOfWork.CompleteAsync();
+			if (res > 0)
+				return Ok(Quality);
+			return BadRequest("Add Quality operation failed");
+			
         }
 
-        [HttpGet("/Get_Quality_By_Id/{id}")]
-        public async Task<IActionResult> Get(int id)
+        [HttpGet("/Get_Quality_By_Id/{id}/{lang}")]
+        public async Task<ActionResult<QualityDto>> Get(int id,string lang)
         {
             var Quality = await _unitOfWork.Qualities.GetByIdAsync(e => e.Id == id);
             if (Quality == null) return NotFound("News not found");
-
-            return Ok(Quality);
-        }
-
-        [HttpGet("/Get_All_Qualitys")]
-        public async Task<IActionResult> GetAll()
-        {
-            var Qualitys = await _unitOfWork.Qualities.GetAllAsync(null);
-            if (Qualitys == null) return NotFound("There is no qualities created");
-
-            return Ok(Qualitys);
-        }
-
-        [HttpPut("/Update_Quality")]
-        public async Task<IActionResult> Update(QualityDto QualityDto)
-        {
-            var Quality = await _unitOfWork.Qualities.GetByIdAsync(e => e.Id == QualityDto.Id);
-
-            if (Quality == null) return NotFound("Quality Not Found");
-
-            Quality = new()
+            if (lang == "eng")
             {
-                Id = QualityDto.Id,
-                Name = QualityDto.Name,
-                Description = QualityDto.Description,
-            };
+                var mapped = new QualityDto
+                {
+                    Name = Quality.Name,
+                    Description = Quality.Description,
+                    Id = id
+                };
+                return Ok(mapped);
 
-
-            var QualityUpdated = await _unitOfWork.Qualities.UpdateAsync(Quality);
-            if (QualityUpdated == null) return BadRequest("Quality Update operation failed");
-
-            await _unitOfWork.CompleteAsync();
-            return Ok(Quality);
+			}
+            else
+            {
+				var mapped = new QualityDto
+				{
+					Name = Quality.ArabicName,
+					Description = Quality.ArabicDescription,
+					Id = id
+				};
+				return Ok(mapped);
+			}
         }
 
-        [HttpDelete("/Delete_Quality/{id}")]
-        public async Task<IActionResult> Delete(int id)
+        [HttpGet("/Get_All_Qualitys/{lang}")]
+        public async Task<ActionResult<IEnumerable<QualityDto>>> GetAll(string lang)
         {
-            var Quality = await _unitOfWork.Qualities.GetByIdAsync(e => e.Id == id);
-            if (Quality == null)
+            var qualitys = await _unitOfWork.Qualities.GetAllAsync(null);
+            if (qualitys is  null) return NotFound("There is no qualities created");
+   //         if (lang == "eng")
+   //         {
+   //             var mapped = qualitys.Select(x => new QualityDto
+   //             {
+   //                 Id = x.Id,
+   //                 Name = x.Name,
+   //                 Description = x.Description,
+   //             });
+   //             return Ok(mapped);
+   //         }
+   //         else
+   //         {
+			//	var mapped = qualitys.Select(x => new QualityDto
+			//	{
+			//		Id = x.Id,
+			//		Name = x.Name,
+			//		Description = x.Description,
+			//	});
+			//	return Ok(mapped);
+			//}
+            return Ok(lang == "eng" ? qualitys.Select(x => new QualityDto
+            {
+                Id = x.Id,
+                Name = x.Name,
+                Description = x.Description,
+            }) : qualitys.Select(x => new QualityDto
+            {
+                Id = x.Id,
+                Name = x.Name,
+                Description = x.Description,
+            }));
+        }
+		[Authorize(Roles = "Admin")]
+		[HttpPut("/Update_Quality")]
+        public async Task<ActionResult<bool?>> Update(UpdateQualitiyDto QualityDto)
+        {
+            var quality = await _unitOfWork.Qualities.GetByIdAsync(e => e.Id == QualityDto.Id);
+                
+            if (quality == null) return NotFound("Quality Not Found");
+
+
+            quality.Id = QualityDto.Id;
+            quality.Name = QualityDto.Name;
+            quality.ArabicName = QualityDto.ArabicName;
+			quality.ArabicDescription = QualityDto.ArabicDescription;
+          
+
+
+             _unitOfWork.Qualities.Update(quality);
+           
+			int res = await _unitOfWork.CompleteAsync();
+			if (res > 0)
+				return Ok(true);
+			return BadRequest("Quality Update operation failed");
+		}
+		[Authorize(Roles = "Admin")]
+		[HttpDelete("/Delete_Quality/{id}")]
+        public async Task<ActionResult<bool?>> Delete(int id)
+        {
+            var quality = await _unitOfWork.Qualities.GetByIdAsync(e => e.Id == id);
+            if (quality == null)
                 return NotFound("Quality Not Found");
 
-            var QualityDeleted = await _unitOfWork.Qualities.DeleteAsync(id);
-            if (QualityDeleted == null) return BadRequest("Quality delete operation failed");
-
-            await _unitOfWork.CompleteAsync();
-            return Ok(Quality);
-        }
+            _unitOfWork.Qualities.Delete(quality);
+            
+			int res = await _unitOfWork.CompleteAsync();
+			if (res > 0)
+				return Ok(true);
+			return BadRequest("Quality Delete operation failed");
+		}
     }
 }

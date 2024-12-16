@@ -11,8 +11,10 @@ namespace FinalProject.Core.Models
     {
         public int NewsId { get; set; }
         public string Name { get; set; }
-        public string Description { get; set; }
-        public string img { get; set; }
+        public string ArabicName { get; set; }
+		public string ArabicDescription { get; set; }
+		public string Description { get; set; }
+		public string img { get; set; }
         public DateTime News_Date { get; set; }
 
         

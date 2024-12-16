@@ -6,9 +6,11 @@ using System.Threading.Tasks;
 
 namespace FinalProject.Core.Dtos.UnitDots
 {
-    public class AddEmployeeToUnit
-    {
-        public int UnitId { get; set; }
-        public int EmployeeId { get; set; }
+	public class UnitDto
+	{
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
+
     }
 }

@@ -1,22 +1,12 @@
-﻿using FinalProject.Core.Dtos.DepartmentDtos;
-using FinalProject.Core.Models;
-using FinalProject.Core;
-using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-using FinalProject.Core.Models;
+﻿using FinalProject.Core;
 using FinalProject.Core.Dtos.DepartmentDots;
-using FinalProject.Core.Dtos.UnitDots;
-
-using FinalProject.Core.Dtos.CollegeDots;
-using FinalProject.EF.Migrations;
-using Microsoft.AspNetCore.Http;
-using System.Collections.Generic;
-using FinalProject.EF;
-using FinalProject.Core;
+using FinalProject.Core.Dtos.DepartmentDtos;
+using FinalProject.Core.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 namespace FinalProject.Api.Controllers
 {
-    [Route("api/[controller]")]
+	[Route("api/[controller]")]
     [ApiController]
     public class DepartmentController : ControllerBase
     {
@@ -30,13 +20,14 @@ namespace FinalProject.Api.Controllers
 		// POST: api/Department/Create_Department
 		[Authorize(Roles = "Admin")]
 		[HttpPost("/Create_Department")]
-        public async Task<IActionResult> Create(CreateDepartmentDto departmentDto)
+        public async Task<ActionResult<bool>> Create(CreateDepartmentDto departmentDto)
         {
-            Department department = new Department()
+            var department = new Department()
             {
                 Name = departmentDto.Name,
+                ArabicName=departmentDto.ArabicName,
                 Description = departmentDto.Description,
-                
+                ArabicDescription=departmentDto.ArabicDescription,
                 Head_Of_Department = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == departmentDto.HeadOfDepartmentId),
 
             };
@@ -44,111 +35,159 @@ namespace FinalProject.Api.Controllers
             var AddDepartment = await _unitOfWork.Departments.AddAsync(department);
             if ( AddDepartment == null) return BadRequest("Add Department operation failed");
 
-            await _unitOfWork.CompleteAsync();
-            return Ok(department);
-        }
+			int res = await _unitOfWork.CompleteAsync();
+			if (res > 0)
+				return Ok(department);
+			return BadRequest("Department Create operation failed");
+		}
 
         // GET: api/Department/Get_Department_By_Id/{id}
-        [HttpGet("/Get_Department_By_Id/{id}")]
-        public async Task<IActionResult> Get(int id)
+        [HttpGet("/Get_Department_By_Id/{id}/{lang}")]
+        public async Task<ActionResult<DepartmentDto>> Get(int id,string lang)
         {
-            Department department =await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == id, new[] { "College", "Head_Of_Department", "Employees", "Courses" });
-            if (department == null) return NotFound("Department not found");
+            Department department = await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == id, new[] { "Head_Of_Department" });
+            if (department == null) 
+                return NotFound("Department not found");
+            if (lang=="eng")
+            {
 
-            return Ok(department);
+                var mapped = new DepartmentDto
+                {
+                    Description = department.Description,
+                    Name = department.Name,
+                    EmpImage = department.Head_Of_Department.Image,
+                    EmpJob_Title = department.Head_Of_Department.Job_Title,
+                    EmployeeId = department.Head_Of_Department.EmployeeId,
+                    EmpName = department.Head_Of_Department.Name,
+                    EmpResume = department.Head_Of_Department.Resume,
+                    EmpId=department.Head_Of_Department.EmployeeId
+                };
+                return Ok(mapped);
+            }
+            else
+            {
+				var mapped = new DepartmentDto
+				{
+					Description = department.ArabicDescription,
+					Name = department.ArabicName,
+					EmpImage = department.Head_Of_Department.Image,
+					EmpJob_Title = department.Head_Of_Department.ArabicJob_Title,
+					EmployeeId = department.Head_Of_Department.EmployeeId,
+					EmpName = department.Head_Of_Department.ArabicName,
+					EmpResume = department.Head_Of_Department.Resume
+				};
+				return Ok(mapped);
+			}
         }
+        //GET: api/Department/GetDetails
+        [HttpGet]
 
         // GET: api/Department/Get_All_Departments
-        [HttpGet("/Get_All_Departments")]
-        public async Task<IActionResult> GetAll()
+        [HttpGet("/Get_All_Departments/{lang}")]
+        public async Task<ActionResult<IEnumerable<Department>>> GetAll(string lang)
         {
-            IEnumerable<Department> departments =await _unitOfWork.Departments.GetAllAsync(null,new[] { "College" , "Head_Of_Department" , "Employees" , "Courses" });
+            IEnumerable<Department> departments = await _unitOfWork.Departments.GetAllAsync(null,null);
             if (departments == null) return NotFound("There is no department created yet");
-
-            return Ok(departments);
+            if (lang=="eng")
+            {
+                
+                return Ok(departments.Select(x=> new Department
+				{
+                    DepartmentId=x.DepartmentId,
+                    Name=x.Name,
+                }));
+            }
+            else
+            {
+				
+				return Ok(departments.Select(x => new Department
+				{
+					DepartmentId = x.DepartmentId,
+					Name = x.ArabicName,
+				}));
+			}
         }
 
 		// PUT: api/Department/Update_Department
 		[Authorize(Roles = "Admin")]
-		[HttpPut("/Update_Department")]
-        public async Task<IActionResult> Update(UpdateDepartmentDto departmentDto)
+		[HttpPut("/Update_Department/{id}")]
+        public async Task<ActionResult<Department>> Update(int id,[FromBody] CreateDepartmentDto departmentDto)
         {
-            var department =await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == departmentDto.DepartmentId, new[] { "College" });
+            var department =await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == id);
 
             if ( department == null)
                 return NotFound("Department not found");
 
-             department = new Department()
-            {
-                DepartmentId = departmentDto.DepartmentId,
-                Name = departmentDto.Name,
-                Description = departmentDto.Description,
 
-                
-                //College = await _unitOfWork.Colleges.GetByIdAsync(c => c.CollegeId == departmentDto.CollegeId),
+            department.Name = departmentDto.Name;
+            department.ArabicName = departmentDto.ArabicName;
+            department.Description = departmentDto.Description;
+            department.ArabicDescription = departmentDto.ArabicDescription;
+            department.Head_Of_Department = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == departmentDto.HeadOfDepartmentId);
 
-                //Head_Of_DepartmentEmployeeId = departmentDto.HeadOfDepartmentId,
-                //Head_Of_Department = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == departmentDto.HeadOfDepartmentId),
-            };
-
-            var UpdateDepartment = await _unitOfWork.Departments.UpdateAsync(department);
-            if (UpdateDepartment == null) return BadRequest("Update department operation failed.");
-            await _unitOfWork.CompleteAsync();
-            return Ok(department);
-        }
+		
+			_unitOfWork.Departments.Update(department);
+            
+			int res = await _unitOfWork.CompleteAsync();
+			if (res > 0)
+				return Ok(department);
+			return BadRequest("Department Update operation failed");
+		}
 		[Authorize(Roles = "Admin")]
-		[HttpPut("/Add_Emloyee_To_Departmet")]
-        public async Task<IActionResult> AddEmployeeToDepartment(AddEmplyeeToDepartment AddEmployeeDto)
+		[HttpPut("/Add_Emloyee_To_Departmet/{departmentId}/{employeeId}")]
+        public async Task<ActionResult<bool?>> AddEmployeeToDepartment(int departmentId,int employeeId)
         {
 
-
-            var employee = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == AddEmployeeDto.EmployeeId);
+            var employee = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == employeeId);
             if (employee == null) return NotFound("Employee not found");
 
-            var Department = await _unitOfWork.Departments.GetByIdAsync(d=> d.DepartmentId == AddEmployeeDto.DepartmentId);
-            if (Department == null) return NotFound("Department not found");
+            var department = await _unitOfWork.Departments.GetByIdAsync(d=> d.DepartmentId == departmentId);
+            if (department == null) return NotFound("Department not found");
 
-            var employeeAdded = await _unitOfWork.Departments.AddEmployeeAsync(AddEmployeeDto.DepartmentId, AddEmployeeDto.EmployeeId);
+            department.Employees.Add(employee);
+			_unitOfWork.Departments.Update(department);
 
-            if(employeeAdded ==null) return NotFound();
-
-            await _unitOfWork.CompleteAsync();
-            return Ok(employeeAdded);
-
+			int res = await _unitOfWork.CompleteAsync();
+			if (res > 0)
+				return Ok(true);
+			return BadRequest("Employee added  failed");
+			
         }
 
 		[Authorize(Roles = "Admin")]
 		[HttpPut("/Remove_Emloyee_From_Department")]
-        public async Task<IActionResult> RemoveEmployeeFromDepartment(AddEmplyeeToDepartment AddEmployeeDto)
+        public async Task<ActionResult<bool>> RemoveEmployeeFromDepartment(AddEmplyeeToDepartment AddEmployeeDto)
         {
             var employee = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == AddEmployeeDto.EmployeeId);
             if (employee == null) return NotFound("Employee not found");
 
-            var Department = await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == AddEmployeeDto.DepartmentId);
-            if (Department == null) return NotFound("Department not found");
+            var department = await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == AddEmployeeDto.DepartmentId);
+            if (department == null) return NotFound("Department not found");
 
-
-            var employeeRemoved = await _unitOfWork.Departments.RemoveEmployeeAsync(AddEmployeeDto.DepartmentId, AddEmployeeDto.EmployeeId);
-
-            if (employeeRemoved == null) return NotFound();
-            await _unitOfWork.CompleteAsync();
-
-            return Ok(employeeRemoved);
+            department.Employees.Remove(employee);
+            _unitOfWork.Departments.Update(department);
+			int res = await _unitOfWork.CompleteAsync();
+			if (res > 0)
+				return Ok(true);
+			return BadRequest("Employee Removed  failed");
 
         }
 
 		// DELETE: api/Department/Delete_Department/{id}
 		[Authorize(Roles = "Admin")]
 		[HttpDelete("/Delete_Department/{id}")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<ActionResult<Department>> Delete(int id)
         {
             Department department =await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == id, new[] { "College" });
             if (department == null) return NotFound("Department Not Found");
 
-            var DeleteDepartment = await _unitOfWork.Departments.DeleteAsync(id);
-            if (DeleteDepartment == null) return BadRequest("Delete department operation failed");
-            await _unitOfWork.CompleteAsync();
-            return Ok(department);
+            _unitOfWork.Departments.Delete(department);
+            
+			int res = await _unitOfWork.CompleteAsync();
+			if (res > 0)
+				return Ok(department);
+			return BadRequest("Delete department operation failed");
+			
         }
     }
 }

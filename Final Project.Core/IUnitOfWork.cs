@@ -23,8 +23,10 @@ namespace FinalProject.Core
         public IUnitRepository Units { get; }
         
         public IQualityRepository Qualities { get; }
+		public IUnitEmployeesRepository UnitEmployees { get; }
+		public IUnitCoursesRepositry UnitCourses{ get; }
 
-        int Complete();
+		int Complete();
         Task<int> CompleteAsync();
     }
 }

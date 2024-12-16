@@ -11,10 +11,13 @@ namespace FinalProject.Core.Models
     {//dev
         public int EventId { get; set; }
         public string Name { get; set; }
-        public string Description { get; set; }
-        public string img { get; set; }
-        public DateTime Event_Start_Date { get; set; }
-     
+        public string ArabicName { get; set; }
+		public string ArabicDescription { get; set; }
+		public string Description { get; set; }
+		public string img { get; set; }
         
-    }
+        public DateTime Event_Start_Date { get; set; }
+
+
+	}
 }

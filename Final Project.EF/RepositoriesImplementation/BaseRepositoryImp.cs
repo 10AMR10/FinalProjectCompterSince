@@ -10,6 +10,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 
 namespace FinalProject.EF.RepositoriesImplementation
 {
@@ -29,7 +30,7 @@ namespace FinalProject.EF.RepositoriesImplementation
             return entity;
         }
 
-        public async Task<T> GetByIdAsync(Expression<Func<T, bool>> match, string[] includes = null)
+        public async Task<T> GetByIdAsync(Expression<Func<T, bool>> match, string[]? includes = null)
         {
             //var entity = _context.Set<T>().Find(id);
             //if (entity == null)
@@ -41,43 +42,44 @@ namespace FinalProject.EF.RepositoriesImplementation
             if (includes != null)
                 foreach (var include in includes)
                     query = query.Include(include);
-
+            //asnoTracking
             var entity = await query.FirstOrDefaultAsync(match);
             if (entity == null)
                 return null;
 
-             _context.Entry(entity).State= EntityState.Detached;
-
+             
             return entity;
         }
 
-        public async Task<IEnumerable<T>> GetAllAsync(Expression<Func<T, bool>>? match =null, string[]? includes = null)
+        
+public async Task<IEnumerable<T>> GetAllAsync(Expression<Func<T, bool>>? match =null, string[]? includes = null)
         {
             IQueryable<T> query = _context.Set<T>();
             if (includes != null)
                 foreach (var include in includes)
                     query = query.Include(include);
+			if (match != null)
+			{
+				query = query.Where(match).AsNoTracking();
+			}
 
-            return await query.ToListAsync();
-        }
 
-        public async Task<T> UpdateAsync(T entity)
+			return await query.ToListAsync();
+			
+		}
+        public void Update(T entity)
         {
-            if (entity == null)
-                return null;
+            
            _context.Set<T>().Update(entity);
-            return  entity;
-        }
-
-        public async Task<T> DeleteAsync(int id)
-        {
-           var entity =await _context.Set<T>().FindAsync(id);
-            if (entity == null)
-                return null;
-            _context.Set<T>().Remove(entity);
-            return entity;
-        }
-
         
-    }
+        }
+
+        public void Delete(T entity)
+        {
+           
+            _context.Set<T>().Remove(entity);
+            
+        }
+
+	}
 }

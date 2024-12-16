@@ -1,9 +1,11 @@
 ﻿using DiabetesApp.API.Dtos;
 using DiabetesApp.Core.Service.Contract;
+using FinalProject.Core.Models.identity;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics.Eventing.Reader;
 using System.Security.Claims;
 using Talabat.APIs.Errors;
 
@@ -13,13 +15,13 @@ namespace DiabetesApp.API.Controllers
 	[ApiController]
 	public class AccountsController : ControllerBase
 	{
-		private readonly UserManager<IdentityUser> _userManager;
-		private readonly SignInManager<IdentityUser> _signInManager;
+		private readonly UserManager<ApplicationUser> _userManager;
+		private readonly SignInManager<ApplicationUser> _signInManager;
 
 		private readonly ITokentService _tokentService;
 
 
-		public AccountsController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager
+		public AccountsController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager
 			, ITokentService tokentService)
 		{
 			this._userManager = userManager;
@@ -29,16 +31,27 @@ namespace DiabetesApp.API.Controllers
 
 		}
 		// Make Login (Login Dto)
-		[HttpPost("Login")]
-		public async Task<ActionResult<UserDto>> Login(LoginDto input)
+		[HttpPost("Login/{lang}")]
+		public async Task<ActionResult<UserDto>> Login([FromBody] LoginDto input,string lang)
 		{
 			var user = await _userManager.FindByEmailAsync(input.Email);
-
+			
 			if (user is null)
-				return BadRequest(new ApiResponse(400, "Email Not Exist"));
+			{
+				if (lang == "eng") 
+					return BadRequest(new ApiResponse(400, "Email Not Exist"));
+				else
+					return BadRequest(new ApiResponse(400, "الايميل ليس موجود"));
+
+			}
 			var res = await _signInManager.CheckPasswordSignInAsync(user, input.Password, false);
 			if (!res.Succeeded)
-				return BadRequest(new ApiResponse(400, "Wrong Password"));
+			{
+				if (lang == "eng")
+					return BadRequest(new ApiResponse(400, "Wrong Password"));
+				else
+					return BadRequest(new ApiResponse(400, "كلمه المرور غير صحيحه"));
+			}
 
 
 			return Ok(new UserDto
@@ -59,7 +72,7 @@ namespace DiabetesApp.API.Controllers
 		{
 			if (await _userManager.FindByEmailAsync(input.email) is not null)
 				return BadRequest(new ApiResponse(400, "Dublicated Email"));
-			var user = new IdentityUser
+			var user = new ApplicationUser
 			{
 				Email = input.email,
 				
@@ -93,7 +106,7 @@ namespace DiabetesApp.API.Controllers
 		public async Task<ActionResult<IReadOnlyList<UserDto>>> GetAllUsers()
 		{
 			var users = await _userManager.Users.ToListAsync();
-			List<IdentityUser> EmpUsers = new List<IdentityUser>();
+			List<ApplicationUser> EmpUsers = new List<ApplicationUser>();
 			foreach (var user in users)
 			{
 				var role = await _userManager.GetRolesAsync(user);
@@ -102,6 +115,8 @@ namespace DiabetesApp.API.Controllers
 			}
 			//var hospitals= await _unitOfWork.GetRepo<Hospitail>().GetAllAsync();
 			//var hosIds
+			if (EmpUsers.Count == 0)
+				return NotFound(new ApiResponse(404, "Users Not Found"));
 			var mapped = EmpUsers.Select(x => new UserToReturnDto
 			{
 				Id = x.Id,

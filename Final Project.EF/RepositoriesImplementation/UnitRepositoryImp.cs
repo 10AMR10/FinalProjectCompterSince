@@ -21,27 +21,7 @@ namespace FinalProject.EF.RepositoriesImplementation
 
         
 
-        public async Task<Employee> AddEmployeeAsync(int UnitId, int EmployeeId)
-        {
-            var Unit = await _context.Units.FindAsync(UnitId);
-            var employee = await _context.Employees.FindAsync(EmployeeId);
-            //Unit.Employees.Append(employee);
-            employee.Unit = Unit;
-            await _context.SaveChangesAsync();
-            return employee;
-        }
-
-        public async Task<Unit> RemoveEmployeeAsync(int UnitId, int EmployeeId)
-        {
-            var Unit = await _context.Units.FindAsync(UnitId);
-            var employee = await _context.Employees.FindAsync(EmployeeId);
-            Unit.Employees.Remove(employee);
-
-            _context.Units.Update(Unit);
-            await _context.SaveChangesAsync();
-            return Unit;
-        }
-
+        
         public async Task<ICollection<Employee>> AddEmployeeRangeAsync(int id, ICollection<Employee> employees)
         {
             var unit = await _context.Departments.FindAsync(id);

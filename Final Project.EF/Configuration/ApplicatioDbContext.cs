@@ -10,9 +10,12 @@ using FinalProject;
 using FinalProject.EF;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using FinalProject.Core.Models.identity;
+using System.Reflection.Metadata.Ecma335;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 namespace FinalProject.EF.Configuration
 {
-    public class ApplicationDbContext : IdentityDbContext<IdentityUser>
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 	{
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
         {
@@ -26,7 +29,7 @@ namespace FinalProject.EF.Configuration
         public DbSet<Employee> Employees { get; set; }
         public DbSet<Unit> Units { get; set; }
         public DbSet<Course> Courses{ get; set; }
-        
+        public DbSet<UnitCourses> UnitCourses { get; set; }
         public DbSet<Quality> Qualities { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -36,29 +39,39 @@ namespace FinalProject.EF.Configuration
           
 
 
-            modelBuilder.Entity<Department>()
+			modelBuilder.Entity<Department>()
                 .HasMany(d => d.Employees)
                 .WithOne(e => e.Department)
-                //.HasForeignKey(e=> e.DepartmentId)
+                .HasForeignKey(e=> e.DepartmentId)
                 .OnDelete(DeleteBehavior.NoAction);
 
 
 
             modelBuilder.Entity<Department>()
                 .HasMany(d => d.Courses)
-                .WithOne(e => e.Department);
+                .WithOne(e => e.Department)
+                .HasForeignKey(f=> f.DepartmentId);
 
-            modelBuilder.Entity<Unit>()
-                .HasMany(u => u.Employees)
-                .WithOne(e => e.Unit);
-                //.HasForeignKey(e=> e.EmployeeId);
 
            
+            modelBuilder.Entity<ApplicationUser>()
+                .HasOne(u => u.employee)
+                .WithOne(e => e.applicationUser)
+                .HasForeignKey<ApplicationUser>(e => e.EmployeId);
 
-            modelBuilder.Entity<Quality>()
-                .HasData(new Quality { Id = 1 , Name = "Quality 1 Name" , Description = "Quality 1 Description"});
 
-        }
+			modelBuilder.Entity<UnitCourses>()
+                .HasOne(x=> x.unit)
+                .WithMany(u=>u.unitCourses)
+                .HasForeignKey(f=>f.UnitId);
+
+            modelBuilder.Entity<Unit>()
+                .HasMany(u => u.UnitEmployees)
+                .WithOne(e => e.Unit)
+                .HasForeignKey(e=> e.UnitId);
+
+
+		}
 
 
     }

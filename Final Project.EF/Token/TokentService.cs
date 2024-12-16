@@ -1,4 +1,5 @@
 ﻿using DiabetesApp.Core.Service.Contract;
+using FinalProject.Core.Models.identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -16,7 +17,7 @@ namespace DiabetesApp.Service
 		{
 			this.configuration = configuration;
 		}
-		public async Task<string> CreateTokenAsync(IdentityUser user, UserManager<IdentityUser> userManager)
+		public async Task<string> CreateTokenAsync(ApplicationUser user, UserManager<ApplicationUser> userManager)
 		{
 			//Payload
 			//private claims => user...

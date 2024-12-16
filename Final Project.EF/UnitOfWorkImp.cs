@@ -1,23 +1,11 @@
-﻿using FinalProject;
-
+﻿using FinalProject.Core;
 using FinalProject.Core.IRepositories;
-using FinalProject.Core.Models;
 using FinalProject.EF.Configuration;
 using FinalProject.EF.RepositoriesImplementation;
-using FinalProject.Core;
-using FinalProject.Core.IRepositories;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using FinalProject.Core.Dtos;
-
-using FinalProject.Core;
 
 namespace FinalProject.EF
 {
-    public class UnitOfWorkImp : IUnitOfWork
+	public class UnitOfWorkImp : IUnitOfWork
     {
         private readonly ApplicationDbContext _context;
         public UnitOfWorkImp(ApplicationDbContext context)
@@ -32,7 +20,10 @@ namespace FinalProject.EF
             Units = new UnitRepositoryImp(_context);
              
             Qualities = new QualityRepositoryImp(_context);
-        }
+            UnitEmployees = new UnitEmployeesRepositryImp(_context);
+			UnitCourses=new UnitCoursesRepositryImp(_context);
+
+		}
 
         public IEventRepository Events { get; private set; }
         public INewsRepository News { get; private set; }
@@ -43,8 +34,11 @@ namespace FinalProject.EF
         public IUnitRepository Units { get; private set; }
         
         public IQualityRepository Qualities { get; private set; }
+		public IUnitEmployeesRepository UnitEmployees { get; private set; }
+		public IUnitCoursesRepositry UnitCourses { get; private set; }
 
-        public int Complete()
+
+		public int Complete()
         {
             return _context.SaveChanges();
         }
