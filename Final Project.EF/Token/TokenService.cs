@@ -1,19 +1,22 @@
-﻿using DiabetesApp.Core.Service.Contract;
-using FinalProject.Core.Models.identity;
+﻿using FinalProject.Core.Models.identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.Tasks;
 
-namespace DiabetesApp.Service
+namespace FinalProject.EF.Token
 {
-	public class TokentService : ITokentService
+	public class TokenService : ITokenService
 	{
 		private readonly IConfiguration configuration;
 
-		public TokentService(IConfiguration configuration)
+		public TokenService(IConfiguration configuration)
 		{
 			this.configuration = configuration;
 		}
@@ -24,7 +27,7 @@ namespace DiabetesApp.Service
 			var authClaims = new List<Claim>()
 			{
 				new Claim(ClaimTypes.Email,user.Email),
-				
+
 			};
 			// claims to roles
 			var roles = await userManager.GetRolesAsync(user);

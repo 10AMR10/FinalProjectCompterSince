@@ -1,10 +1,4 @@
-﻿using FinalProject.Core.Models;
-using Microsoft.AspNetCore.Http;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Microsoft.AspNetCore.Http;
 
 namespace FinalProject.Core.Dtos.UnitDots
 {
@@ -15,7 +9,7 @@ namespace FinalProject.Core.Dtos.UnitDots
 
 		//public string Description { get; set; }
 
-		public IFormFile PdfDescription { get; set; }
+		public IFormFile? PdfDescription { get; set; }
 		
 	}
 }

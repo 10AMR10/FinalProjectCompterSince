@@ -1,11 +1,10 @@
 ﻿using DiabetesApp.API.Dtos;
-using DiabetesApp.Core.Service.Contract;
 using FinalProject.Core.Models.identity;
+using FinalProject.EF.Token;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Diagnostics.Eventing.Reader;
 using System.Security.Claims;
 using Talabat.APIs.Errors;
 
@@ -18,11 +17,11 @@ namespace DiabetesApp.API.Controllers
 		private readonly UserManager<ApplicationUser> _userManager;
 		private readonly SignInManager<ApplicationUser> _signInManager;
 
-		private readonly ITokentService _tokentService;
+		private readonly ITokenService _tokentService;
 
 
 		public AccountsController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager
-			, ITokentService tokentService)
+			, ITokenService tokentService)
 		{
 			this._userManager = userManager;
 			this._signInManager = signInManager;

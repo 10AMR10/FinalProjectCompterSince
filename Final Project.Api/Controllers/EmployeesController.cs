@@ -17,6 +17,7 @@ using System.Security.Claims;
 using FinalProject.Core.Dtos.EmployeeDtos;
 using FinalProject.Api.Helpers;
 using Microsoft.AspNetCore.Mvc.Razor;
+using Talabat.APIs.Errors;
 
 
 namespace FinalProject.Api.Controllers
@@ -27,23 +28,25 @@ namespace FinalProject.Api.Controllers
     {
         private readonly IUnitOfWork _unitOfWork;
 		private readonly UserManager<ApplicationUser> _userManager;
+		private readonly IConfiguration _configuration;
 
-		public EmployeeController(IUnitOfWork unitOfWork,UserManager<ApplicationUser> userManager )
+		public EmployeeController(IUnitOfWork unitOfWork,UserManager<ApplicationUser> userManager,IConfiguration configuration )
         {
             _unitOfWork = unitOfWork;
 			this._userManager = userManager;
+			this._configuration = configuration;
 		}
 
 		// POST: api/Employee/Create_Employee
 		[Authorize(Roles = "Admin")]
-		[HttpPost("/Create_Employee")]
-        public async Task<ActionResult<Employee>> Create(EmployeeCreateDto employeeDto)
+		[HttpPost("Create_Employee")]
+        public async Task<ActionResult<bool>> Create( EmployeeCreateDto employeeDto)
         {
             var employee = new Employee()
             {
                 Name = employeeDto.Name,
                 ArabicName= employeeDto.ArabicName,
-                Email = employeeDto.Email,
+                Email = employeeDto.email,
                 
                 Job_Title = employeeDto.Job_Title,
                 ArabicJob_Title=employeeDto.ArabicJob_Title,
@@ -51,19 +54,43 @@ namespace FinalProject.Api.Controllers
                 //DepartmentId = employeeDto.DepartmentId
                 //Department =await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == employeeDto.DepartmentId)
             };
-			if (FileMangment.UploadFile(employeeDto.Resume) == null)
+			employee.Resume = FileMangment.UploadFile(employeeDto.Resume, _configuration);
+			if (employee.Resume == null)
 				return BadRequest("Extention Or Size Not Valid For Cv");
-			employee.Resume = FileMangment.UploadFile(employeeDto.Resume);
-			if (FileMangment.UploadFile(employeeDto.Image) == null)
+			employee.Image = FileMangment.UploadFile(employeeDto.Image, _configuration);
+			if (employee.Image == null)
 				return BadRequest("Extention Or Size Not Valid For Image");
-			employee.Image = FileMangment.UploadFile(employeeDto.Image);
+			
+
 
 			await _unitOfWork.Employees.AddAsync(employee);
            
             int res=await _unitOfWork.CompleteAsync();
-            if(res>0)
-                 return Ok(employee);
-            return BadRequest("Employee creation failed");
+            if(res==0)
+				return BadRequest("Employee creation failed");
+			if (await _userManager.FindByEmailAsync(employeeDto.email) is not null)
+				return BadRequest(new ApiResponse(400, "Dublicated Email"));
+			var user = new ApplicationUser
+			{
+				Email = employeeDto.email,
+
+				UserName = employeeDto.Name.Replace(" ", ""),
+			};
+			user.EmployeId = employee.EmployeeId;
+			var resu = await _userManager.CreateAsync(user, employeeDto.password);
+			employee.applicationUser = user;
+			if (!resu.Succeeded)
+			{
+				// Collect detailed error messages
+				var errorDetails = resu.Errors
+					.Select(e => $"Code: {e.Code}, Description: {e.Description}")
+					.ToList();
+
+				// Return a detailed BadRequest response
+				return BadRequest(new ApiResponse(400, string.Join(" | ", errorDetails)));
+			}
+			await _userManager.AddToRoleAsync(user, "Doctor");
+			return Ok(true);
 
         }
 		//[HttpPost("/Upload_CV")]
@@ -159,7 +186,7 @@ namespace FinalProject.Api.Controllers
 					Name = employee.ArabicName,
 					EmployeeId = employee.EmployeeId,
 					Job_Title = employee.ArabicJob_Title,
-					DepartmentName = employee.Department.ArabicName is not null ? employee.Department.ArabicName : "Non",
+					DepartmentName = employee.Department.ArabicName is not null ? employee.Department.ArabicName : "ليس فى قسم",
 					Resume = employee.Resume,
 
 				};
@@ -170,7 +197,7 @@ namespace FinalProject.Api.Controllers
 		}
 		// GET: api/Employee/Get_All_Employees
 
-		[HttpGet("/Get_All_Employees/{departmentId}/{lang}")]
+		[HttpGet("/Get_All_Employees_In_Department/{departmentId}/{lang}")]
         public async Task<ActionResult<IReadOnlyList<EmployeeToReturnDto>>> GetAllEmployees(int departmentId,string lang)
         {
 
@@ -252,11 +279,11 @@ namespace FinalProject.Api.Controllers
 
 			employee.Name = employeeDto.Name;
 			employee.ArabicName = employeeDto.ArabicName;
-			employee.Email = employeeDto.Email;
+			employee.Email = employeeDto.email;
 			employee.Job_Title = employeeDto.Job_Title;
 			employee.ArabicJob_Title = employeeDto.ArabicJob_Title;
-			employee.Resume = FileMangment.UploadFile(employeeDto.Resume);
-			employee.Image = FileMangment.UploadFile(employeeDto.Image);
+			employee.Resume = FileMangment.UploadFile(employeeDto.Resume, _configuration);
+			employee.Image = FileMangment.UploadFile(employeeDto.Image, _configuration);
 			//DepartmentId = employeeDto.DepartmentId,
 			employee.Department = await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == employeeDto.DepartmentId);
 

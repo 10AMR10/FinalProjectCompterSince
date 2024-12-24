@@ -11,10 +11,12 @@ namespace FinalProject.Api.Controllers
 	public class UnitController : ControllerBase
 	{
 		private readonly IUnitOfWork _unitOfWork;
+		private readonly IConfiguration _configuration;
 
-		public UnitController(IUnitOfWork unitOfWork)
+		public UnitController(IUnitOfWork unitOfWork,IConfiguration configuration)
 		{
 			_unitOfWork = unitOfWork;
+			this._configuration = configuration;
 		}
 
 		// POST: api/Unit
@@ -183,9 +185,9 @@ namespace FinalProject.Api.Controllers
 				Job_Title = input.Job_Title,
 				Unit = unit,
 			};
-			if (FileMangment.UploadFile(input.Resume) == null)
+			employee.Resume = FileMangment.UploadFile(input.Resume, _configuration);
+			if (employee.Resume == null)
 				return BadRequest("Extention Or Size Not Valid For Cv");
-			employee.Resume = FileMangment.UploadFile(input.Resume);
 			await _unitOfWork.UnitEmployees.AddAsync(employee);
 			int res = await _unitOfWork.CompleteAsync();
 			if (res > 0)
@@ -249,13 +251,13 @@ namespace FinalProject.Api.Controllers
 			var course = new UnitCourses
 			{
 				UnitId = unitId,
-				ArabicTitle=input.ArabicTitle,
-				Title=input.Title,
-				unit=unit,
+				ArabicTitle = input.ArabicTitle,
+				Title = input.Title,
+				unit = unit,
 			};
-			if (FileMangment.UploadFile(input.PdfDescription) == null)
+			course.PdfDescription = FileMangment.UploadFile(input.PdfDescription, _configuration);
+			if (course.PdfDescription == null)
 				return BadRequest("Extention Or Size Not Valid For Cv");
-			course.PdfDescription = FileMangment.UploadFile(input.PdfDescription);
 			await _unitOfWork.UnitCourses.AddAsync(course);
 			int res = await _unitOfWork.CompleteAsync();
 			if (res > 0)
@@ -281,7 +283,7 @@ namespace FinalProject.Api.Controllers
 		[HttpGet("Get_Course_By_UnitId{unitId}/{lang}")]
 		public async Task<ActionResult<IReadOnlyList<UnitCourseDto>>> GetCourseInUnit(int unitId, string lang)
 		{
-			var unit = await _unitOfWork.Units.GetByIdAsync(x => x.UnitId == unitId, new[] { "UnitEmployees" });
+			var unit = await _unitOfWork.Units.GetByIdAsync(x => x.UnitId == unitId, new[] { "unitCourses" });
 			if (unit == null)
 				return BadRequest("Sorry No Unit. ");
 			var course = unit.unitCourses;

@@ -21,16 +21,18 @@ namespace FinalProject.Api.Controllers
 	public class CourseController : ControllerBase
 	{
 		private readonly IUnitOfWork _unitOfWork;
+		private readonly IConfiguration _configuration;
 
-		public CourseController(IUnitOfWork unitOfWork)
+		public CourseController(IUnitOfWork unitOfWork, IConfiguration configuration)
 		{
 			_unitOfWork = unitOfWork;
+			this._configuration = configuration;
 		}
 
 		// POST: api/Course/Create_Course
 		[Authorize(Roles = "Admin")]
-		[HttpPost("/Create_Course")]
-		public async Task<ActionResult<bool>> Create([FromBody] CreateCourseDto courseDto)
+		[HttpPost("Create_Course")]
+		public async Task<ActionResult<bool>> Create( CreateCourseDto courseDto)
 		{
 			
 				Course course = new Course()
@@ -40,15 +42,14 @@ namespace FinalProject.Api.Controllers
 					LevelYear = courseDto.LevelYear,
 					ArabicLevelYear= courseDto.ArabicLevelYear,
 					DepartmentId = courseDto.DepartmentId,
-					//Department =await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == courseDto.DepartmentId)
+					Department =await _unitOfWork.Departments?.GetByIdAsync(d => d.DepartmentId == courseDto.DepartmentId)
 				};
-				if (FileMangment.UploadFile(courseDto.PdfDescription) == null)
+				course.PdfDescription = FileMangment.UploadFile(courseDto.PdfDescription, _configuration);
+				if (course.PdfDescription == null)
 					return BadRequest("Extention Or Size Not Valid");
-				course.PdfDescription = FileMangment.UploadFile(courseDto.PdfDescription);
 
-				var AddCourse = await _unitOfWork.Courses.AddAsync(course);
-				if (AddCourse == null) return BadRequest("Add Course operation failed ");
-
+				await _unitOfWork.Courses.AddAsync(course);
+				
 				int res = await _unitOfWork.CompleteAsync();
 				if (res > 0)
 					return Ok(true);
@@ -185,9 +186,9 @@ namespace FinalProject.Api.Controllers
 					//Department = await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == courseDto.DepartmentId)
 
 				
-				if (FileMangment.UploadFile(courseDto.PdfDescription) == null)
+				course.PdfDescription = FileMangment.UploadFile(courseDto.PdfDescription, _configuration);
+				if (course.PdfDescription == null)
 					return BadRequest("Extention Or Size Not Valid");
-				course.PdfDescription = FileMangment.UploadFile(courseDto.PdfDescription);
 
 				_unitOfWork.Courses.Update(course);
 				

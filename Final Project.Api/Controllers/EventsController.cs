@@ -22,10 +22,12 @@ namespace FinalProject.Api.Controllers
 	public class EventsController : ControllerBase
 	{
 		private readonly IUnitOfWork _unitOfWork;
+		private readonly IConfiguration _configuration;
 
-		public EventsController(IUnitOfWork unitOfWork)
+		public EventsController(IUnitOfWork unitOfWork,IConfiguration configuration)
 		{
 			_unitOfWork = unitOfWork;
+			this._configuration = configuration;
 		}
 		[Authorize(Roles = "Admin")]
 		[HttpPost("/Create_Event")]
@@ -42,9 +44,9 @@ namespace FinalProject.Api.Controllers
 
 			};
 
-			if (FileMangment.UploadFile(EventDto.Image) == null)
+			evnt.img = FileMangment.UploadFile(EventDto.Image, _configuration);
+			if (evnt.img == null)
 				return BadRequest("Extention Or Size Not Valid");
-			evnt.img = FileMangment.UploadFile(EventDto.Image);
 
 			await _unitOfWork.Events.AddAsync(evnt);
 
@@ -132,9 +134,9 @@ namespace FinalProject.Api.Controllers
 			evnt.Description = EventDto.ArabicDescription;
 			evnt.Event_Start_Date = EventDto.Event_Start_Date;
 				
-			if (FileMangment.UploadFile(EventDto.Image) == null)
+			evnt.img = FileMangment.UploadFile(EventDto.Image, _configuration);
+			if (evnt.img == null)
 				return BadRequest("Extention Or Size Not Valid");
-			evnt.img = FileMangment.UploadFile(EventDto.Image);
 
 			_unitOfWork.Events.Update(evnt);
 			int res = await _unitOfWork.CompleteAsync();
