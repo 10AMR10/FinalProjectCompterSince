@@ -54,12 +54,15 @@ namespace FinalProject.Api.Controllers
                 //DepartmentId = employeeDto.DepartmentId
                 //Department =await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == employeeDto.DepartmentId)
             };
-			employee.Resume = FileMangment.UploadFile(employeeDto.Resume, _configuration);
-			if (employee.Resume == null)
+			var resume = FileMangment.UploadFile(employeeDto.Resume, _configuration);
+			if (resume is null)
 				return BadRequest("Extention Or Size Not Valid For Cv");
-			employee.Image = FileMangment.UploadFile(employeeDto.Image, _configuration);
-			if (employee.Image == null)
+			employee.Resume = resume;
+			var imag= FileMangment.UploadFile(employeeDto.Image, _configuration);
+			if (imag == null)
 				return BadRequest("Extention Or Size Not Valid For Image");
+			employee.Image = imag;
+			
 			
 
 
@@ -164,16 +167,16 @@ namespace FinalProject.Api.Controllers
 		public async Task<ActionResult<EmployeeToReturnDto>> Get(int id, string lang)
 		{
 			Employee employee = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == id, new[] { "Department" });
-			if (employee == null)
-				return NotFound("Epmloyee not found");
 			if (lang == "eng")
 			{
+			if (employee == null)
+				return NotFound("Epmloyee not found");
 				var mapped = new EmployeeToReturnDto()
 				{
 					Name = employee.Name,
 					EmployeeId = employee.EmployeeId,
 					Job_Title = employee.Job_Title,
-					DepartmentName = employee.Department.Name is not null ? employee.Department.Name : "Non",
+					DepartmentName = employee.Department?.Name is not null ? employee.Department.Name : "Non",
 					Resume = employee.Resume,
 
 				};
@@ -181,12 +184,14 @@ namespace FinalProject.Api.Controllers
 			}
 			else
 			{
+				if (employee == null)
+					return NotFound("لا يوجد موظفين");
 				var mapped = new EmployeeToReturnDto()
 				{
 					Name = employee.ArabicName,
 					EmployeeId = employee.EmployeeId,
 					Job_Title = employee.ArabicJob_Title,
-					DepartmentName = employee.Department.ArabicName is not null ? employee.Department.ArabicName : "ليس فى قسم",
+					DepartmentName = employee.Department?.ArabicName is not null ? employee.Department.ArabicName : "ليس فى قسم",
 					Resume = employee.Resume,
 
 				};
@@ -201,10 +206,10 @@ namespace FinalProject.Api.Controllers
         public async Task<ActionResult<IReadOnlyList<EmployeeToReturnDto>>> GetAllEmployees(int departmentId,string lang)
         {
 
-            IEnumerable<Employee> employees =await _unitOfWork.Employees.GetAllAsync(x=> x.Department.DepartmentId==departmentId,new[] { "Department"});
-            if (employees == null) return NotFound("There is no employee added yet.");
+            var employees =await _unitOfWork.Employees.GetAllAsync(x=> x.Department.DepartmentId==departmentId,new[] { "Department"});
 			if (lang=="eng")
 			{
+            if (employees == null) return NotFound("There is no employee added yet.");
 
 				var mapped = employees.Select(x => new EmployeeToReturnDto
 				{
@@ -218,6 +223,8 @@ namespace FinalProject.Api.Controllers
 			}
 			else
 			{
+				if (employees == null)
+					return NotFound("لا يوجد موظفين");
 				var mapped = employees.Select(x => new EmployeeToReturnDto
 				{
 					EmployeeId = x.EmployeeId,
@@ -238,14 +245,14 @@ namespace FinalProject.Api.Controllers
 			var user = await _userManager.FindByEmailAsync(email);
 
 			var employee = await _unitOfWork.Employees.GetByIdAsync(x=>x.EmployeeId==user.EmployeId, new[] { "Department" });
-			if (employee == null) return NotFound("There is no employee added yet.");
 			if (lang == "eng")
 			{
+			if (employee == null) return NotFound("There is no employee added yet.");
 
 				var mapped =new EmployeeToReturnDto
 				{
 					EmployeeId = employee.EmployeeId,
-					DepartmentName = employee.Department.Name,
+					DepartmentName = employee.Department?.Name,
 					Job_Title = employee.Job_Title,
 					Name = employee.Name,
 					Resume = employee.Resume
@@ -254,10 +261,12 @@ namespace FinalProject.Api.Controllers
 			}
 			else
 			{
+				if (employee == null)
+					return NotFound("لا يوجد موظفين");
 				var mapped = new EmployeeToReturnDto
 				{
 					EmployeeId = employee.EmployeeId,
-					DepartmentName = employee.Department.ArabicName,
+					DepartmentName = employee.Department?.ArabicName,
 					Job_Title = employee.ArabicJob_Title,
 					Name = employee.ArabicName,
 					Resume = employee.Resume,
@@ -269,11 +278,11 @@ namespace FinalProject.Api.Controllers
 		}
 
 		// PUT: api/Employee/Update_Employee
-		[Authorize(Roles = "Admin")]
+		[Authorize(Roles = "Admin,Doctor")]
 		[HttpPut("/Update_Employee/{id}")]
-        public async Task<ActionResult<bool>> Update(int id,[FromBody] EmployeeUpdateDto employeeDto)
+        public async Task<ActionResult<bool>> Update(int id,EmployeeUpdateDto employeeDto)
         {
-            Employee employee =await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == id, new[] { "Department" });
+            var  employee =await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == id, new[] { "Department" });
             if (employee == null) return NotFound("Employee not found");
 
 
@@ -282,8 +291,14 @@ namespace FinalProject.Api.Controllers
 			employee.Email = employeeDto.email;
 			employee.Job_Title = employeeDto.Job_Title;
 			employee.ArabicJob_Title = employeeDto.ArabicJob_Title;
-			employee.Resume = FileMangment.UploadFile(employeeDto.Resume, _configuration);
-			employee.Image = FileMangment.UploadFile(employeeDto.Image, _configuration);
+			var resume = FileMangment.UploadFile(employeeDto.Resume, _configuration);
+			if (resume is null)
+				return BadRequest("Extention Or Size Not Valid For Cv");
+			employee.Resume = resume;
+			var imag = FileMangment.UploadFile(employeeDto.Image, _configuration);
+			if (imag == null)
+				return BadRequest("Extention Or Size Not Valid For Image");
+			employee.Image = imag;
 			//DepartmentId = employeeDto.DepartmentId,
 			employee.Department = await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == employeeDto.DepartmentId);
 
@@ -300,7 +315,7 @@ namespace FinalProject.Api.Controllers
 		[HttpDelete("/Delete_Employee/{id}")]
         public async Task<ActionResult<bool>> Delete(int id)
         {
-            var employee =await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == id, new[] { "Department" });
+            var employee =await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == id);
 
             if (employee == null)
                 return NotFound("Employee Not Found");

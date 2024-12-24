@@ -18,6 +18,7 @@ namespace FinalProject.Core.Models
 
 
 		public Employee? Head_Of_Department { get; set; }
+        public int? Head_Of_DepartmentId { get; set; }
 
         public ICollection<Employee>? Employees { get; set; }
 

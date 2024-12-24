@@ -20,7 +20,7 @@ namespace FinalProject.Api.Controllers
 		// POST: api/Department/Create_Department
 		[Authorize(Roles = "Admin")]
 		[HttpPost("/Create_Department")]
-        public async Task<ActionResult<bool>> Create(CreateDepartmentDto departmentDto)
+        public async Task<ActionResult<bool>> Create([FromBody] CreateDepartmentDto departmentDto)
         {
             var department = new Department()
             {
@@ -29,15 +29,15 @@ namespace FinalProject.Api.Controllers
                 Description = departmentDto.Description,
                 ArabicDescription=departmentDto.ArabicDescription,
                 Head_Of_Department = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == departmentDto.HeadOfDepartmentId),
+                Head_Of_DepartmentId=departmentDto.HeadOfDepartmentId,
 
             };
 
-            var AddDepartment = await _unitOfWork.Departments.AddAsync(department);
-            if ( AddDepartment == null) return BadRequest("Add Department operation failed");
-
+             await _unitOfWork.Departments.AddAsync(department);
+            
 			int res = await _unitOfWork.CompleteAsync();
 			if (res > 0)
-				return Ok(department);
+				return Ok(true);
 			return BadRequest("Department Create operation failed");
 		}
 
@@ -46,52 +46,52 @@ namespace FinalProject.Api.Controllers
         public async Task<ActionResult<DepartmentDto>> Get(int id,string lang)
         {
             Department department = await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == id, new[] { "Head_Of_Department" });
-            if (department == null) 
-                return NotFound("Department not found");
             if (lang=="eng")
             {
+            if (department == null) 
+                return NotFound("Department not found");
 
                 var mapped = new DepartmentDto
                 {
                     Description = department.Description,
                     Name = department.Name,
-                    EmpImage = department.Head_Of_Department.Image,
-                    EmpJob_Title = department.Head_Of_Department.Job_Title,
-                    EmployeeId = department.Head_Of_Department.EmployeeId,
-                    EmpName = department.Head_Of_Department.Name,
-                    EmpResume = department.Head_Of_Department.Resume,
-                    EmpId=department.Head_Of_Department.EmployeeId
+                    EmpImage = department.Head_Of_Department?.Image,
+                    EmpJob_Title = department.Head_Of_Department?.Job_Title,
+                    EmployeeId = department.Head_Of_Department?.EmployeeId,
+                    EmpName = department.Head_Of_Department?.Name,
+                    EmpResume = department.Head_Of_Department?.Resume,
+                    
                 };
                 return Ok(mapped);
             }
             else
             {
+				if (department == null)
+					return NotFound("لا يوجد قسم");
 				var mapped = new DepartmentDto
 				{
 					Description = department.ArabicDescription,
 					Name = department.ArabicName,
-					EmpImage = department.Head_Of_Department.Image,
-					EmpJob_Title = department.Head_Of_Department.ArabicJob_Title,
-					EmployeeId = department.Head_Of_Department.EmployeeId,
-					EmpName = department.Head_Of_Department.ArabicName,
-					EmpResume = department.Head_Of_Department.Resume
+					EmpImage = department.Head_Of_Department?.Image,
+					EmpJob_Title = department.Head_Of_Department?.ArabicJob_Title,
+					EmployeeId = department.Head_Of_Department?.EmployeeId,
+					EmpName = department.Head_Of_Department?.ArabicName,
+					EmpResume = department.Head_Of_Department?.Resume
 				};
 				return Ok(mapped);
 			}
         }
-        //GET: api/Department/GetDetails
-        [HttpGet]
-
+     
         // GET: api/Department/Get_All_Departments
         [HttpGet("/Get_All_Departments/{lang}")]
-        public async Task<ActionResult<IEnumerable<Department>>> GetAll(string lang)
+        public async Task<ActionResult<IEnumerable<DepartmentsToReturnDto>>> GetAll(string lang)
         {
-            IEnumerable<Department> departments = await _unitOfWork.Departments.GetAllAsync(null,null);
-            if (departments == null) return NotFound("There is no department created yet");
+            IEnumerable<Department> departments = await _unitOfWork.Departments.GetAllAsync(null);
             if (lang=="eng")
             {
+            if (departments == null) return NotFound("There is no department created yet");
                 
-                return Ok(departments.Select(x=> new Department
+                return Ok(departments.Select(x=> new DepartmentsToReturnDto
 				{
                     DepartmentId=x.DepartmentId,
                     Name=x.Name,
@@ -99,8 +99,9 @@ namespace FinalProject.Api.Controllers
             }
             else
             {
-				
-				return Ok(departments.Select(x => new Department
+            if (departments == null) return NotFound("لا يوجد اقسام");
+
+				return Ok(departments.Select(x => new DepartmentsToReturnDto
 				{
 					DepartmentId = x.DepartmentId,
 					Name = x.ArabicName,
@@ -111,7 +112,7 @@ namespace FinalProject.Api.Controllers
 		// PUT: api/Department/Update_Department
 		[Authorize(Roles = "Admin")]
 		[HttpPut("/Update_Department/{id}")]
-        public async Task<ActionResult<Department>> Update(int id,[FromBody] CreateDepartmentDto departmentDto)
+        public async Task<ActionResult<bool>> Update(int id,[FromBody] CreateDepartmentDto departmentDto)
         {
             var department =await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == id);
 
@@ -123,14 +124,14 @@ namespace FinalProject.Api.Controllers
             department.ArabicName = departmentDto.ArabicName;
             department.Description = departmentDto.Description;
             department.ArabicDescription = departmentDto.ArabicDescription;
-            department.Head_Of_Department = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == departmentDto.HeadOfDepartmentId);
+            department.Head_Of_Department = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == departmentDto.HeadOfDepartmentId) ;
 
 		
 			_unitOfWork.Departments.Update(department);
             
 			int res = await _unitOfWork.CompleteAsync();
 			if (res > 0)
-				return Ok(department);
+				return Ok(true);
 			return BadRequest("Department Update operation failed");
 		}
 		[Authorize(Roles = "Admin")]
@@ -140,11 +141,11 @@ namespace FinalProject.Api.Controllers
 
             var employee = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == employeeId);
             if (employee == null) return NotFound("Employee not found");
-
+            employee.DepartmentId = departmentId;
             var department = await _unitOfWork.Departments.GetByIdAsync(d=> d.DepartmentId == departmentId);
             if (department == null) return NotFound("Department not found");
 
-            department.Employees.Add(employee);
+            department.Employees?.Add(employee);
 			_unitOfWork.Departments.Update(department);
 
 			int res = await _unitOfWork.CompleteAsync();
@@ -155,16 +156,16 @@ namespace FinalProject.Api.Controllers
         }
 
 		[Authorize(Roles = "Admin")]
-		[HttpPut("/Remove_Emloyee_From_Department")]
-        public async Task<ActionResult<bool>> RemoveEmployeeFromDepartment(AddEmplyeeToDepartment AddEmployeeDto)
+		[HttpPut("/Remove_Emloyee_From_Department/{departmentId}/{employeeId}")]
+        public async Task<ActionResult<bool>> RemoveEmployeeFromDepartment(int departmentId, int employeeId)
         {
-            var employee = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == AddEmployeeDto.EmployeeId);
+            var employee = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == employeeId);
             if (employee == null) return NotFound("Employee not found");
-
-            var department = await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == AddEmployeeDto.DepartmentId);
+            employee.DepartmentId = null;
+            var department = await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == departmentId);
             if (department == null) return NotFound("Department not found");
 
-            department.Employees.Remove(employee);
+            department.Employees?.Remove(employee);
             _unitOfWork.Departments.Update(department);
 			int res = await _unitOfWork.CompleteAsync();
 			if (res > 0)
@@ -178,7 +179,7 @@ namespace FinalProject.Api.Controllers
 		[HttpDelete("/Delete_Department/{id}")]
         public async Task<ActionResult<Department>> Delete(int id)
         {
-            Department department =await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == id, new[] { "College" });
+            Department department =await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == id);
             if (department == null) return NotFound("Department Not Found");
 
             _unitOfWork.Departments.Delete(department);

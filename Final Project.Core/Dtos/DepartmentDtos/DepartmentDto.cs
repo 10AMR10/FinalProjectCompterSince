@@ -10,12 +10,12 @@ namespace FinalProject.Core.Dtos.DepartmentDtos
 	{
 		public string Description { get; set; }
 		public string Name { get; set; }
-		public int EmployeeId { get; set; }
-		public string EmpName { get; set; }
-		public string EmpJob_Title { get; set; }
-		public string EmpResume { get; set; }
-		public string EmpImage { get; set; }
-        public int EmpId { get; set; }
+		public int? EmployeeId { get; set; }
+		public string? EmpName { get; set; }
+		public string? EmpJob_Title { get; set; }
+		public string? EmpResume { get; set; }
+		public string? EmpImage { get; set; }
+  
 
     }
 }
