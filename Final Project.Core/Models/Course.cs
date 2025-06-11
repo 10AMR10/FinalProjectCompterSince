@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
-
-namespace FinalProject.Core.Models
+﻿namespace FinalProject.Core.Models
 {
 	public class Course
 	{
@@ -14,8 +7,9 @@ namespace FinalProject.Core.Models
 		public string ArabicTitle { get; set; }
 
 		//public string Description { get; set; }
-		public string LevelYear { get; set; }
-		public string ArabicLevelYear { get; set; }
+		public LevelYear? levelYear { get; set; }
+        public int? LevelYearId { get; set; }
+        //public string ArabicLevelYear { get; set; }
 		public string PdfDescription { get; set; }
 
 		public int? DepartmentId { get; set; }

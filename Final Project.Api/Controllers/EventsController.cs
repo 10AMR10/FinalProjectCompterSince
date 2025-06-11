@@ -1,19 +1,11 @@
-﻿using FinalProject.Core.Models;
+﻿using FinalProject.Api.Helpers;
 using FinalProject.Core;
-using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-using FinalProject.Core.Dtos.EmployeeDots;
-using FinalProject.Core.Models;
-using Microsoft.AspNetCore.Http;
-using FinalProject.Core.Dtos.CollegeDots;
-using System.Collections.Generic;
-using FinalProject.EF;
-using FinalProject.Core;
+using FinalProject.Core.Dtos.EmployeeDtos;
 using FinalProject.Core.Dtos.EventDtos;
-using FinalProject.EF.Migrations;
+using FinalProject.Core.Models;
+using FinalProject.EF.Translation;
 using Microsoft.AspNetCore.Authorization;
-using FinalProject.Api.Helpers;
-using FinalProject.Core.Dtos.NewsDtos;
+using Microsoft.AspNetCore.Mvc;
 
 namespace FinalProject.Api.Controllers
 {
@@ -23,37 +15,66 @@ namespace FinalProject.Api.Controllers
 	{
 		private readonly IUnitOfWork _unitOfWork;
 		private readonly IConfiguration _configuration;
-
-		public EventsController(IUnitOfWork unitOfWork,IConfiguration configuration)
+		private readonly TranslationService _translationService;
+		
+		public EventsController(IUnitOfWork unitOfWork,IConfiguration configuration, TranslationService translationService)
 		{
 			_unitOfWork = unitOfWork;
 			this._configuration = configuration;
+			this._translationService = translationService;
 		}
 		[Authorize(Roles = "Admin")]
-		[HttpPost("/Create_Event")]
-		public async Task<ActionResult<bool>> Create(CreateEvent EventDto)
+		[HttpPost("/Create_Event/{lang}")]
+		public async Task<ActionResult<bool>> Create(string lang,CreateEventDto input)
 		{
-			var evnt = new Event()
+			if (lang== "eng")
 			{
-				Name = EventDto.Name,
-				ArabicName = EventDto.ArabicName,
-				Description = EventDto.Description,
-				ArabicDescription = EventDto.ArabicDescription,
-				Event_Start_Date = EventDto.Event_Start_Date,
+				var evnt = new Event()
+				{
+					Name = input.Name,
+					ArabicName = await _translationService.TranslateLongTextAsync(input.Name, "en", "ar"),
+					Description = input.Description,
+					ArabicDescription = await _translationService.TranslateLongTextAsync(input.Description, "en", "ar"),
+					Event_Start_Date = input.Event_Start_Date,
 
 
-			};
+				};
 
-			evnt.img = FileMangment.UploadFile(EventDto.Image, _configuration);
-			if (evnt.img == null)
-				return BadRequest("Extention Or Size Not Valid");
+				evnt.img = FileMangment.UploadFile(input.Image, _configuration);
+				if (evnt.img == null)
+					return BadRequest("Extention Or Size Not Valid");
 
-			await _unitOfWork.Events.AddAsync(evnt);
+				await _unitOfWork.Events.AddAsync(evnt);
 
-			int res = await _unitOfWork.CompleteAsync();
-			if (res > 0)
-				return Ok(true);
-			return BadRequest("Created Failed");
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(true);
+				return BadRequest("Created Failed");
+			}
+			else
+			{
+				var evnt = new Event()
+				{
+					ArabicName = input.Name,
+					Name = await _translationService.TranslateLongTextAsync(input.Name, "ar", "en"),
+					ArabicDescription = input.Description,
+					Description = await _translationService.TranslateLongTextAsync(input.Description, "ar", "en"),
+					Event_Start_Date = input.Event_Start_Date,
+
+
+				};
+
+				evnt.img = FileMangment.UploadFile(input.Image, _configuration);
+				if (evnt.img == null)
+					return BadRequest("الحجم او الاضافه غير صحيح");
+
+				await _unitOfWork.Events.AddAsync(evnt);
+
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(true);
+				return BadRequest("لم يتم عمل الحدث");
+			}
 		}
 
 		[HttpGet("/Get_Event_By_Id/{id}/{lang}")]
@@ -119,37 +140,65 @@ namespace FinalProject.Api.Controllers
 			}
 		}
 		[Authorize(Roles = "Admin")]
-		[HttpPut("/Update_Event/{id}")]
-		public async Task<ActionResult<bool>> Update(int id,[FromBody] UpdateEvent EventDto)
+		[HttpPut("/Update_Event/{id}/{lang}")]
+		public async Task<ActionResult<bool>> Update(int id,string lang,[FromForm] CreateEventDto input)
 		{
-			var evnt = await _unitOfWork.Events.GetByIdAsync(e => e.EventId == EventDto.EventId, new[] { "College" });
+			if (lang == "eng")
+			{
+				var evnt = await _unitOfWork.Events.GetByIdAsync(e => e.EventId == id);
 
-			if (evnt == null) return NotFound("Event Not Found");
+				if (evnt == null) return NotFound("Event Not Found");
 
 
-			evnt.EventId = EventDto.EventId;
-			evnt.Name = EventDto.Name;
-			evnt.ArabicName = EventDto.ArabicName;
-			evnt.Description = EventDto.Description;
-			evnt.Description = EventDto.ArabicDescription;
-			evnt.Event_Start_Date = EventDto.Event_Start_Date;
-				
-			evnt.img = FileMangment.UploadFile(EventDto.Image, _configuration);
-			if (evnt.img == null)
-				return BadRequest("Extention Or Size Not Valid");
 
-			_unitOfWork.Events.Update(evnt);
-			int res = await _unitOfWork.CompleteAsync();
-			if (res > 0)
-				return Ok(true);
-			return BadRequest("Event Update operation failed");
+				evnt.Name = input.Name;
+				evnt.ArabicName = await _translationService.TranslateLongTextAsync(input.Name, "en", "ar");
+				evnt.Description = input.Description;
+				evnt.Description = await _translationService.TranslateLongTextAsync(input.Description, "en", "ar");
+				evnt.Event_Start_Date = input.Event_Start_Date;
 
+				evnt.img = FileMangment.UploadFile(input.Image, _configuration);
+				if (evnt.img == null)
+					return BadRequest("Extention Or Size Not Valid");
+
+				_unitOfWork.Events.Update(evnt);
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(true);
+				return BadRequest("Event Update operation failed");
+
+			}
+			else
+			{
+				var evnt = await _unitOfWork.Events.GetByIdAsync(e => e.EventId == id);
+
+				if (evnt == null) return NotFound("الحدث غير موجود");
+
+
+
+				evnt.ArabicName = input.Name;
+				evnt.Name = await _translationService.TranslateLongTextAsync(input.Name, "ar", "en");
+				evnt.ArabicDescription = input.Description;
+				evnt.Description = await _translationService.TranslateLongTextAsync(input.Description, "ar", "en");
+				evnt.Event_Start_Date = input.Event_Start_Date;
+
+				evnt.img = FileMangment.UploadFile(input.Image, _configuration);
+				if (evnt.img == null)
+					return BadRequest("الحجم او الاضافه غير صحيح");
+
+				_unitOfWork.Events.Update(evnt);
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(true);
+				return BadRequest("لم يتم تعديل الحدث");
+
+			}
 		}
 		[Authorize(Roles = "Admin")]
 		[HttpDelete("/Delete_Event/{id}")]
 		public async Task<ActionResult<bool>> Delete(int id)
 		{
-			var evnt = await _unitOfWork.Events.GetByIdAsync(e => e.EventId == id, new[] { "College" });
+			var evnt = await _unitOfWork.Events.GetByIdAsync(e => e.EventId == id);
 			if (evnt == null)
 				return NotFound("Event Not Found");
 
@@ -184,9 +233,9 @@ namespace FinalProject.Api.Controllers
 				{
 					EventId = x.EventId,
 					Event_Start_Date = x.Event_Start_Date,
-					Description = x.Description,
+					Description = x.ArabicDescription,
 					img = x.img,
-					Name = x.Name,
+					Name = x.ArabicName,
 				});
 				return Ok(mapped);
 			}

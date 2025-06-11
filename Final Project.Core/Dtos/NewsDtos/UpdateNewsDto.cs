@@ -9,10 +9,10 @@ namespace FinalProject.Core.Dtos.NewsDtos
 {
     public class UpdateNewsDto
     {
-        public int NewsId { get; set; }
+       
         public string Name { get; set; }
-        public string ArabicName { get; set; }
-		public string ArabicDescription { get; set; }
+  //      public string ArabicName { get; set; }
+		//public string ArabicDescription { get; set; }
 		public string Description { get; set; }
 		public DateTime News_Date { get; set; }
 

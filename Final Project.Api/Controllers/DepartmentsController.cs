@@ -2,6 +2,7 @@
 using FinalProject.Core.Dtos.DepartmentDots;
 using FinalProject.Core.Dtos.DepartmentDtos;
 using FinalProject.Core.Models;
+using FinalProject.EF.Translation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 namespace FinalProject.Api.Controllers
@@ -11,34 +12,59 @@ namespace FinalProject.Api.Controllers
     public class DepartmentController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+		private readonly TranslationService _translationService;
 
-        public DepartmentController(IUnitOfWork unitOfWork)
+		public DepartmentController(IUnitOfWork unitOfWork, TranslationService translationService)
         {
             _unitOfWork = unitOfWork;
-        }
+			this._translationService = translationService;
+		}
 
 		// POST: api/Department/Create_Department
 		[Authorize(Roles = "Admin")]
-		[HttpPost("/Create_Department")]
-        public async Task<ActionResult<bool>> Create([FromBody] CreateDepartmentDto departmentDto)
+		[HttpPost("/Create_Department/{lang}")]
+        public async Task<ActionResult<bool>> Create(string lang,[FromBody] CreateDepartmentDto departmentDto)
         {
-            var department = new Department()
+            if (lang== "eng")
             {
-                Name = departmentDto.Name,
-                ArabicName=departmentDto.ArabicName,
-                Description = departmentDto.Description,
-                ArabicDescription=departmentDto.ArabicDescription,
-                Head_Of_Department = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == departmentDto.HeadOfDepartmentId),
-                Head_Of_DepartmentId=departmentDto.HeadOfDepartmentId,
+                var department = new Department()
+                {
+                    Name = departmentDto.Name,
+                    ArabicName = await _translationService.TranslateLongTextAsync(departmentDto.Name, "en", "ar"),
+                    Description = departmentDto.Description,
+                    ArabicDescription = await _translationService.TranslateLongTextAsync(departmentDto.Description, "en", "ar"),
+                    Head_Of_Department = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == departmentDto.HeadOfDepartmentId),
+                    Head_Of_DepartmentId = departmentDto.HeadOfDepartmentId,
 
-            };
+                };
 
-             await _unitOfWork.Departments.AddAsync(department);
-            
-			int res = await _unitOfWork.CompleteAsync();
-			if (res > 0)
-				return Ok(true);
-			return BadRequest("Department Create operation failed");
+                await _unitOfWork.Departments.AddAsync(department);
+
+                int res = await _unitOfWork.CompleteAsync();
+                if (res > 0)
+                    return Ok(true);
+                return BadRequest("Department Create operation failed");
+            }
+            else
+            {
+				var department = new Department()
+				{
+					ArabicName = departmentDto.Name,
+					Name = await _translationService.TranslateLongTextAsync(departmentDto.Name, "ar", "en"),
+					ArabicDescription = departmentDto.Description,
+					Description = await _translationService.TranslateLongTextAsync(departmentDto.Description, "ar", "en"),
+					Head_Of_Department = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == departmentDto.HeadOfDepartmentId),
+					Head_Of_DepartmentId = departmentDto.HeadOfDepartmentId,
+
+				};
+
+				await _unitOfWork.Departments.AddAsync(department);
+
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(true);
+				return BadRequest("لم يتم عمل القسم");
+			}
 		}
 
         // GET: api/Department/Get_Department_By_Id/{id}
@@ -53,6 +79,7 @@ namespace FinalProject.Api.Controllers
 
                 var mapped = new DepartmentDto
                 {
+                   
                     Description = department.Description,
                     Name = department.Name,
                     EmpImage = department.Head_Of_Department?.Image,
@@ -70,6 +97,7 @@ namespace FinalProject.Api.Controllers
 					return NotFound("لا يوجد قسم");
 				var mapped = new DepartmentDto
 				{
+                    
 					Description = department.ArabicDescription,
 					Name = department.ArabicName,
 					EmpImage = department.Head_Of_Department?.Image,
@@ -109,30 +137,88 @@ namespace FinalProject.Api.Controllers
 			}
         }
 
+        [HttpGet("Get_All_Departments_Details/{lang}")]
+        public async Task<ActionResult<IEnumerable<DepartmentHeadDto>>> GetAllDetails(string lang)
+        {
+            IEnumerable<Department> departments = await _unitOfWork.Departments.GetAllAsync(null, new[] { "Head_Of_Department" });
+
+            if (lang == "eng")
+            {
+                if (departments == null) return NotFound("There is no department created yet");
+
+                return Ok(departments.Select(x => new DepartmentHeadDto
+                {
+                    Id = x.DepartmentId,
+                    Name = x.Name,
+                    Description = x.Description,
+                    EmployeeId = x.Head_Of_Department.EmployeeId,
+                    EmpName = x.Head_Of_Department.Name
+                }));
+            }
+            else
+            {
+                if (departments == null) return NotFound("لا يوجد اقسام");
+
+                return Ok(departments.Select(x => new DepartmentHeadDto
+                {
+                    Id = x.DepartmentId,
+                    Name = x.ArabicName,
+                    Description = x.ArabicDescription,
+                    EmployeeId = x.Head_Of_Department.EmployeeId,
+                    EmpName = x.Head_Of_Department.ArabicName
+                }));
+
+            }
+        }
 		// PUT: api/Department/Update_Department
 		[Authorize(Roles = "Admin")]
-		[HttpPut("/Update_Department/{id}")]
-        public async Task<ActionResult<bool>> Update(int id,[FromBody] CreateDepartmentDto departmentDto)
+		[HttpPut("/Update_Department/{id}/{lang}")]
+        public async Task<ActionResult<bool>> Update(int id,string lang,[FromBody] CreateDepartmentDto departmentDto)
         {
-            var department =await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == id);
+            if (lang== "eng")
+            {
+                var department = await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == id);
 
-            if ( department == null)
-                return NotFound("Department not found");
+                if (department == null)
+                    return NotFound("Department not found");
 
 
-            department.Name = departmentDto.Name;
-            department.ArabicName = departmentDto.ArabicName;
-            department.Description = departmentDto.Description;
-            department.ArabicDescription = departmentDto.ArabicDescription;
-            department.Head_Of_Department = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == departmentDto.HeadOfDepartmentId) ;
+                department.Name = departmentDto.Name;
+                department.ArabicName = await _translationService.TranslateLongTextAsync(departmentDto.Name, "en", "ar");
+                department.Description = departmentDto.Description;
+                department.ArabicDescription = await _translationService.TranslateLongTextAsync(departmentDto.Description, "en", "ar");
+                department.Head_Of_Department = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == departmentDto.HeadOfDepartmentId);
 
-		
-			_unitOfWork.Departments.Update(department);
-            
-			int res = await _unitOfWork.CompleteAsync();
-			if (res > 0)
-				return Ok(true);
-			return BadRequest("Department Update operation failed");
+
+                _unitOfWork.Departments.Update(department);
+
+                int res = await _unitOfWork.CompleteAsync();
+                if (res > 0)
+                    return Ok(true);
+                return BadRequest("Department Update operation failed");
+            }
+            else
+            {
+				var department = await _unitOfWork.Departments.GetByIdAsync(d => d.DepartmentId == id);
+
+				if (department == null)
+					return NotFound("القسم غير موجود");
+
+
+				department.ArabicName = departmentDto.Name;
+				department.Name = await _translationService.TranslateLongTextAsync(departmentDto.Name, "ar", "en");
+				department.ArabicDescription = departmentDto.Description;
+				department.Description = await _translationService.TranslateLongTextAsync(departmentDto.Description, "ar", "en");
+				department.Head_Of_Department = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == departmentDto.HeadOfDepartmentId);
+
+
+				_unitOfWork.Departments.Update(department);
+
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(true);
+				return BadRequest("لم يتم تعديل القسم");
+			}
 		}
 		[Authorize(Roles = "Admin")]
 		[HttpPut("/Add_Emloyee_To_Departmet/{departmentId}/{employeeId}")]

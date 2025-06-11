@@ -19,7 +19,7 @@ namespace FinalProject.Core.Models
 
 		public string PdfDescription { get; set; }
         public Unit? unit { get; set; }
-        public int UnitId { get; set; }
+        public int? UnitId { get; set; }
 
 
         

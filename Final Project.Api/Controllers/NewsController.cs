@@ -1,9 +1,12 @@
 ﻿using FinalProject.Api.Helpers;
 using FinalProject.Core;
+using FinalProject.Core.Dtos.CourseDots;
 using FinalProject.Core.Dtos.NewsDtos;
 using FinalProject.Core.Models;
+using FinalProject.EF.Translation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Razor;
 namespace FinalProject.Api.Controllers
 {
 	[Route("api/[controller]")]
@@ -12,35 +15,62 @@ namespace FinalProject.Api.Controllers
 	{
 		private readonly IUnitOfWork _unitOfWork;
 		private readonly IConfiguration _configuration;
+		private readonly TranslationService _translationService;
 
-		public NewsController(IUnitOfWork unitOfWork,IConfiguration configuration)
+		public NewsController(IUnitOfWork unitOfWork, IConfiguration configuration, TranslationService translationService)
 		{
 			_unitOfWork = unitOfWork;
 			this._configuration = configuration;
+			this._translationService = translationService;
 		}
-		[Authorize(Roles = "Admin")]
-		[HttpPost]
-		public async Task<ActionResult<bool>> Create(CreateNewsDto NewsDto)
+		//[Authorize(Roles = "Admin")]
+		[HttpPost("{lang}")]
+		public async Task<ActionResult<bool>> Create(string lang,[FromForm] CreateNewsDto input)
 		{
-			News news = new News()
+			if (lang == "eng")
 			{
-				Name = NewsDto.Name,
-				ArabicDescription = NewsDto.ArabicDescription,
-				ArabicName = NewsDto.ArabicName,
-				Description = NewsDto.Description,
-				News_Date = NewsDto.News_Date
-			};
-			news.img = FileMangment.UploadFile(NewsDto.Image, _configuration);
-			if (news.img == null)
-				return BadRequest("Extention Or Size Not Valid");
+				News news = new News()
+				{
+					Name = input.Name,
+					ArabicDescription = await _translationService.TranslateLongTextAsync(input.Description, "en", "ar"),
+					ArabicName = await _translationService.TranslateLongTextAsync(input.Name, "en", "ar"),
+					Description = input.Description,
+					News_Date = input.News_Date
+				};
+				news.img = FileMangment.UploadFile(input.Image, _configuration);
+				if (news.img == null)
+					return BadRequest("Extention Or Size Not Valid");
 
 
-			await _unitOfWork.News.AddAsync(news);
+				await _unitOfWork.News.AddAsync(news);
 
-			int res = await _unitOfWork.CompleteAsync();
-			if (res > 0)
-				return Ok(true);
-			return BadRequest("Add News operation failed");
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(true);
+				return BadRequest("Add News operation failed");
+			}
+			else
+			{
+				News news = new News()
+				{
+					ArabicName = input.Name,
+					Name = await _translationService.TranslateLongTextAsync(input.Name, "ar", "en"),
+					ArabicDescription = input.Description,
+					Description = await _translationService.TranslateLongTextAsync(input.Description, "ar", "en"),
+					News_Date = input.News_Date
+				};
+				news.img = FileMangment.UploadFile(input.Image, _configuration);
+				if (news.img == null)
+					return BadRequest("الحجم او الاضافه غير صحيح");
+
+
+				await _unitOfWork.News.AddAsync(news);
+
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(true);
+				return BadRequest("لم يتم اضافه الخبر");
+			}
 		}
 
 		[HttpGet("/Get_News_By_Id/{id}/{lang}")]
@@ -104,32 +134,53 @@ namespace FinalProject.Api.Controllers
 				return Ok(mapped);
 			}
 		}
-		[Authorize(Roles = "Admin")]
-		[HttpPut("/Update_News")]
-		public async Task<ActionResult<bool>> Update(UpdateNewsDto NewsDto)
+		//[Authorize(Roles = "Admin")]
+		[HttpPut("/Update_News/{id}/{lang}")]
+		public async Task<ActionResult<bool>> Update(int id,string lang, UpdateNewsDto input)
 		{
-			News news = await _unitOfWork.News.GetByIdAsync(n => n.NewsId == NewsDto.NewsId);
+			if (lang=="eng")
+			{
+				News news = await _unitOfWork.News.GetByIdAsync(n => n.NewsId == id);
 
+				if (news == null) return NotFound("News not found");
+				news.Name = input.Name;
+				news.ArabicName = await _translationService.TranslateLongTextAsync(input.Name, "en", "ar");
+				news.ArabicDescription = await _translationService.TranslateLongTextAsync(input.Description, "en", "ar");
+				news.News_Date = input.News_Date;
 
-			if (news == null) return NotFound("News not found");
+				news.img = FileMangment.UploadFile(input.Image, _configuration);
+				if (news.img == null)
+					return BadRequest("Extention Or Size Not Valid");
 
+				_unitOfWork.News.Update(news);
 
-			news.NewsId = NewsDto.NewsId;
-			news.Name = NewsDto.Name;
-			news.ArabicName = NewsDto.ArabicName;
-			news.ArabicDescription = NewsDto.ArabicDescription;
-			news.News_Date = NewsDto.News_Date;
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(true);
+				return BadRequest("News Update operation failed");
+			}
+			else
+			{
+				News news = await _unitOfWork.News.GetByIdAsync(n => n.NewsId == id);
 
-			news.img = FileMangment.UploadFile(NewsDto.Image, _configuration);
-			if (news.img == null)
-				return BadRequest("Extention Or Size Not Valid");
+				if (news == null) return NotFound("الخبر غير موجود");
+				news.ArabicName = input.Name;
+				news.Name = await _translationService.TranslateLongTextAsync(input.Name, "ar", "en");
+				news.Description = await _translationService.TranslateLongTextAsync(input.Description, "ar", "en");
+				news.ArabicDescription = input.Description;
+				news.News_Date = input.News_Date;
 
-			_unitOfWork.News.Update(news);
-			
-			int res = await _unitOfWork.CompleteAsync();
-			if (res > 0)
-				return Ok(true);
-			return BadRequest("News Update operation failed");
+				news.img = FileMangment.UploadFile(input.Image, _configuration);
+				if (news.img == null)
+					return BadRequest("الحجم او الاضافه غير صحيح");
+
+				_unitOfWork.News.Update(news);
+
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(true);
+				return BadRequest("لم يتم تعديل الخبر");
+			}
 		}
 		[Authorize(Roles = "Admin")]
 		[HttpDelete("/Delete_News/{id}")]

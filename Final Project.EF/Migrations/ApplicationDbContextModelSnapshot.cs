@@ -22,6 +22,27 @@ namespace FinalProject.EF.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("FinalProject.Core.Models.Category", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ArabicName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Categories");
+                });
+
             modelBuilder.Entity("FinalProject.Core.Models.Course", b =>
                 {
                     b.Property<int>("CourseId")
@@ -30,10 +51,6 @@ namespace FinalProject.EF.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CourseId"));
 
-                    b.Property<string>("ArabicLevelYear")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("ArabicTitle")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -41,9 +58,8 @@ namespace FinalProject.EF.Migrations
                     b.Property<int?>("DepartmentId")
                         .HasColumnType("int");
 
-                    b.Property<string>("LevelYear")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int?>("LevelYearId")
+                        .HasColumnType("int");
 
                     b.Property<string>("PdfDescription")
                         .IsRequired()
@@ -56,6 +72,8 @@ namespace FinalProject.EF.Migrations
                     b.HasKey("CourseId");
 
                     b.HasIndex("DepartmentId");
+
+                    b.HasIndex("LevelYearId");
 
                     b.ToTable("Courses");
                 });
@@ -179,6 +197,27 @@ namespace FinalProject.EF.Migrations
                     b.ToTable("Events");
                 });
 
+            modelBuilder.Entity("FinalProject.Core.Models.LevelYear", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ArabicName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("LevelYears");
+                });
+
             modelBuilder.Entity("FinalProject.Core.Models.News", b =>
                 {
                     b.Property<int>("NewsId")
@@ -244,6 +283,39 @@ namespace FinalProject.EF.Migrations
                     b.ToTable("Qualities");
                 });
 
+            modelBuilder.Entity("FinalProject.Core.Models.Service", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ArabicTitle")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PdfDescription")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("categoryId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("categoryId");
+
+                    b.ToTable("Services");
+                });
+
             modelBuilder.Entity("FinalProject.Core.Models.Unit", b =>
                 {
                     b.Property<int>("UnitId")
@@ -293,7 +365,7 @@ namespace FinalProject.EF.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("UnitId")
+                    b.Property<int?>("UnitId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -550,9 +622,17 @@ namespace FinalProject.EF.Migrations
                 {
                     b.HasOne("FinalProject.Core.Models.Department", "Department")
                         .WithMany("Courses")
-                        .HasForeignKey("DepartmentId");
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("FinalProject.Core.Models.LevelYear", "levelYear")
+                        .WithMany("Courses")
+                        .HasForeignKey("LevelYearId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Department");
+
+                    b.Navigation("levelYear");
                 });
 
             modelBuilder.Entity("FinalProject.Core.Models.Department", b =>
@@ -569,9 +649,19 @@ namespace FinalProject.EF.Migrations
                     b.HasOne("FinalProject.Core.Models.Department", "Department")
                         .WithMany("Employees")
                         .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Department");
+                });
+
+            modelBuilder.Entity("FinalProject.Core.Models.Service", b =>
+                {
+                    b.HasOne("FinalProject.Core.Models.Category", "category")
+                        .WithMany("Services")
+                        .HasForeignKey("categoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("category");
                 });
 
             modelBuilder.Entity("FinalProject.Core.Models.UnitCourses", b =>
@@ -579,8 +669,7 @@ namespace FinalProject.EF.Migrations
                     b.HasOne("FinalProject.Core.Models.Unit", "unit")
                         .WithMany("unitCourses")
                         .HasForeignKey("UnitId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("unit");
                 });
@@ -589,7 +678,8 @@ namespace FinalProject.EF.Migrations
                 {
                     b.HasOne("FinalProject.Core.Models.Unit", "Unit")
                         .WithMany("UnitEmployees")
-                        .HasForeignKey("UnitId");
+                        .HasForeignKey("UnitId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Unit");
                 });
@@ -598,7 +688,8 @@ namespace FinalProject.EF.Migrations
                 {
                     b.HasOne("FinalProject.Core.Models.Employee", "employee")
                         .WithOne("applicationUser")
-                        .HasForeignKey("FinalProject.Core.Models.identity.ApplicationUser", "EmployeId");
+                        .HasForeignKey("FinalProject.Core.Models.identity.ApplicationUser", "EmployeId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("employee");
                 });
@@ -654,6 +745,11 @@ namespace FinalProject.EF.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("FinalProject.Core.Models.Category", b =>
+                {
+                    b.Navigation("Services");
+                });
+
             modelBuilder.Entity("FinalProject.Core.Models.Department", b =>
                 {
                     b.Navigation("Courses");
@@ -664,6 +760,11 @@ namespace FinalProject.EF.Migrations
             modelBuilder.Entity("FinalProject.Core.Models.Employee", b =>
                 {
                     b.Navigation("applicationUser");
+                });
+
+            modelBuilder.Entity("FinalProject.Core.Models.LevelYear", b =>
+                {
+                    b.Navigation("Courses");
                 });
 
             modelBuilder.Entity("FinalProject.Core.Models.Unit", b =>

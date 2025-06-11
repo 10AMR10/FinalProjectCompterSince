@@ -22,7 +22,9 @@ namespace FinalProject.EF
             Qualities = new QualityRepositoryImp(_context);
             UnitEmployees = new UnitEmployeesRepositryImp(_context);
 			UnitCourses=new UnitCoursesRepositryImp(_context);
-
+			LevelYears=new LevelYearRepository(_context);
+			Categories = new CategoryRepositry(_context);
+            Services = new ServiceRepositry(_context);
 		}
 
         public IEventRepository Events { get; private set; }
@@ -36,7 +38,9 @@ namespace FinalProject.EF
         public IQualityRepository Qualities { get; private set; }
 		public IUnitEmployeesRepository UnitEmployees { get; private set; }
 		public IUnitCoursesRepositry UnitCourses { get; private set; }
-
+		public ILevelYearRepository LevelYears { get; set; }
+		public ICategoryRepositry Categories { get; set ; }
+		public IServiceRepositry Services { get; set; }
 
 		public int Complete()
         {

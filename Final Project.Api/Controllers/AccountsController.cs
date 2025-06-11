@@ -64,41 +64,7 @@ namespace DiabetesApp.API.Controllers
 				Role = string.Join("", await _userManager.GetRolesAsync(user))
 			});
 		}
-		// create user  (RegisterDto) => UserDto
-		[Authorize(Roles = "Admin")]
-		[HttpPost]
-		public async Task<ActionResult<UserDto>> CreateUser(RegisterDto input)
-		{
-			if (await _userManager.FindByEmailAsync(input.email) is not null)
-				return BadRequest(new ApiResponse(400, "Dublicated Email"));
-			var user = new ApplicationUser
-			{
-				Email = input.email,
-				
-				UserName = input.userName,
-			};
-			var res = await _userManager.CreateAsync(user, input.password);
-			if (!res.Succeeded)
-			{
-				// Collect detailed error messages
-				var errorDetails = res.Errors
-					.Select(e => $"Code: {e.Code}, Description: {e.Description}")
-					.ToList();
-
-				// Return a detailed BadRequest response
-				return BadRequest(new ApiResponse(400, string.Join(" | ", errorDetails)));
-			}
-
-			await _userManager.AddToRoleAsync(user, "Doctor");
-			return Ok(new UserDto
-			{
-
-				Role = string.Join("", await _userManager.GetRolesAsync(user)),
-				UserName = user.UserName,
-
-				Token = await _tokentService.CreateTokenAsync(user, _userManager)
-			});
-		}
+		
 		// get all users () => list of usersDto
 		[Authorize(Roles = "Admin")]
 		[HttpGet("AllUsers")]

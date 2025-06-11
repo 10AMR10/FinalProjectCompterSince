@@ -1,49 +1,61 @@
-﻿using FinalProject.Core.Dtos.QuailtyDtos;
+﻿using FinalProject.Core;
+using FinalProject.Core.Dtos.QuailtyDtos;
 using FinalProject.Core.Models;
-using FinalProject.Core;
-using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
-using FinalProject.Core.Dtos.EmployeeDots;
-using FinalProject.Core.Models;
-using Microsoft.AspNetCore.Http;
-using FinalProject.Core.Dtos.CollegeDots;
-using System.Collections.Generic;
-using FinalProject.EF;
-using FinalProject.Core;
-    using FinalProject.EF.Migrations;
+using FinalProject.EF.Translation;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 namespace FinalProject.Api.Controllers
 
 {
-    [Route("api/[controller]")]
+	[Route("api/[controller]")]
     [ApiController]
     public class QualityController : ControllerBase
     {
 
         private readonly IUnitOfWork _unitOfWork;
+		private readonly TranslationService _translationService;
 
-        public QualityController(IUnitOfWork unitOfWork)
+		public QualityController(IUnitOfWork unitOfWork, TranslationService translationService)
         {
             _unitOfWork = unitOfWork;
-        }
+			this._translationService = translationService;
+		}
 		[Authorize(Roles = "Admin")]
-		[HttpPost("/Add_Quality")]
-        public async Task<ActionResult<bool>> Create(AddQualityDto QualityDto)
+		[HttpPost("/Add_Quality/{lang}")]
+        public async Task<ActionResult<bool>> Create(string lang,AddQualityDto input)
         {
-            var Quality = new Quality()
+            if (lang=="eng")
             {
-                Name = QualityDto.Name,
-                ArabicDescription=QualityDto.Description,
-                ArabicName=QualityDto.Name,
-                Description = QualityDto.Description,
-            };
-            await _unitOfWork.Qualities.AddAsync(Quality);
-           
-			int res = await _unitOfWork.CompleteAsync();
-			if (res > 0)
-				return Ok(Quality);
-			return BadRequest("Add Quality operation failed");
-			
+                var Quality = new Quality()
+                {
+                    Name = input.Name,
+                    ArabicName = await _translationService.TranslateLongTextAsync(input.Name, "en", "ar"),
+                    ArabicDescription = await _translationService.TranslateLongTextAsync(input.Description, "en", "ar"),
+                    Description = input.Description,
+                };
+                await _unitOfWork.Qualities.AddAsync(Quality);
+
+                int res = await _unitOfWork.CompleteAsync();
+                if (res > 0)
+                    return Ok(Quality);
+                return BadRequest("Add Quality operation failed"); 
+            }
+            else
+            {
+				var Quality = new Quality()
+				{
+					ArabicName = input.Name,
+					Name = await _translationService.TranslateLongTextAsync(input.Name, "ar", "en"),
+					Description = await _translationService.TranslateLongTextAsync(input.Description, "ar", "en"),
+					ArabicDescription = input.Description,
+				};
+				await _unitOfWork.Qualities.AddAsync(Quality);
+
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(Quality);
+				return BadRequest("لم يتم اضافه الجوده");
+			}
         }
 
         [HttpGet("/Get_Quality_By_Id/{id}/{lang}")]
@@ -56,6 +68,7 @@ namespace FinalProject.Api.Controllers
                 var mapped = new QualityDto
                 {
                     Name = Quality.Name,
+                    
                     Description = Quality.Description,
                     Id = id
                 };
@@ -78,61 +91,75 @@ namespace FinalProject.Api.Controllers
         public async Task<ActionResult<IEnumerable<QualityDto>>> GetAll(string lang)
         {
             var qualitys = await _unitOfWork.Qualities.GetAllAsync(null);
-            if (qualitys is  null) return NotFound("There is no qualities created");
-   //         if (lang == "eng")
-   //         {
-   //             var mapped = qualitys.Select(x => new QualityDto
-   //             {
-   //                 Id = x.Id,
-   //                 Name = x.Name,
-   //                 Description = x.Description,
-   //             });
-   //             return Ok(mapped);
-   //         }
-   //         else
-   //         {
-			//	var mapped = qualitys.Select(x => new QualityDto
-			//	{
-			//		Id = x.Id,
-			//		Name = x.Name,
-			//		Description = x.Description,
-			//	});
-			//	return Ok(mapped);
-			//}
-            return Ok(lang == "eng" ? qualitys.Select(x => new QualityDto
+            if (lang == "eng")
             {
-                Id = x.Id,
-                Name = x.Name,
-                Description = x.Description,
-            }) : qualitys.Select(x => new QualityDto
+            if (qualitys is null) return NotFound("There is no qualities created");
+                var mapped = qualitys.Select(x => new QualityDto
+                {
+                    Id = x.Id,
+                    Name = x.Name,
+                    Description = x.Description,
+                });
+                return Ok(mapped);
+            }
+            else
             {
-                Id = x.Id,
-                Name = x.Name,
-                Description = x.Description,
-            }));
+            if (qualitys is null) return NotFound("لم يتم انشاء جوده");
+                
+                var mapped = qualitys.Select(x => new QualityDto
+                {
+                    Id = x.Id,
+                    Name = x.ArabicName,
+                    Description = x.ArabicDescription,
+                });
+                return Ok(mapped);
+            }
+
         }
 		[Authorize(Roles = "Admin")]
-		[HttpPut("/Update_Quality")]
-        public async Task<ActionResult<bool?>> Update(UpdateQualitiyDto QualityDto)
+		[HttpPut("/Update_Quality/{id}/{lang}")]
+        public async Task<ActionResult<bool?>> Update(int id,string lang,AddQualityDto input)
         {
-            var quality = await _unitOfWork.Qualities.GetByIdAsync(e => e.Id == QualityDto.Id);
-                
-            if (quality == null) return NotFound("Quality Not Found");
+            if (lang=="eng")
+            {
+                var quality = await _unitOfWork.Qualities.GetByIdAsync(e => e.Id == id);
+
+                if (quality == null) return
+                        NotFound("Quality Not Found");
+
+                quality.Name = input.Name;
+                quality.ArabicName = await _translationService.TranslateLongTextAsync(input.Name, "en", "ar");
+                quality.ArabicDescription = await _translationService.TranslateLongTextAsync(input.Description, "en", "ar");
+                quality.Description = input.Description;
 
 
-            quality.Id = QualityDto.Id;
-            quality.Name = QualityDto.Name;
-            quality.ArabicName = QualityDto.ArabicName;
-			quality.ArabicDescription = QualityDto.ArabicDescription;
-          
+                _unitOfWork.Qualities.Update(quality);
+
+                int res = await _unitOfWork.CompleteAsync();
+                if (res > 0)
+                    return Ok(true);
+                return BadRequest("Quality Update operation failed");
+            }
+            else
+            {
+				var quality = await _unitOfWork.Qualities.GetByIdAsync(e => e.Id == id);
+
+				if (quality == null) return
+						NotFound("الجوده غير موجوده");
+
+				quality.ArabicName = input.Name;
+				quality.Name = await _translationService.TranslateLongTextAsync(input.Name, "ar", "en");
+				quality.Description = await _translationService.TranslateLongTextAsync(input.Description, "ar", "en");
+				quality.ArabicDescription = input.Description;
 
 
-             _unitOfWork.Qualities.Update(quality);
-           
-			int res = await _unitOfWork.CompleteAsync();
-			if (res > 0)
-				return Ok(true);
-			return BadRequest("Quality Update operation failed");
+				_unitOfWork.Qualities.Update(quality);
+
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(true);
+				return BadRequest("لم يتم تعديل الجوده");
+			}
 		}
 		[Authorize(Roles = "Admin")]
 		[HttpDelete("/Delete_Quality/{id}")]

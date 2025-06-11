@@ -10,9 +10,10 @@ namespace FinalProject.Core.Dtos.CourseDots
 	{
 		public int CourseId { get; set; }
 		public string Title { get; set; }
-		public string LevelYear { get; set; }
+		public string? LevelYear { get; set; }
 		public string PdfDescription { get; set; }
-		public string? DepartmentName { get; set; }
+        public int? DepartmentId { get; set; }
+        public string? DepartmentName { get; set; }
 
 	}
 }

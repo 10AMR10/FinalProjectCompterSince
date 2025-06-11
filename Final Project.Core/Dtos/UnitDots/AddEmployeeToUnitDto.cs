@@ -12,9 +12,9 @@ namespace FinalProject.Core.Dtos.UnitDots
     {
 		
 		public string Name { get; set; }
-		public string ArabicName { get; set; }
+		//public string ArabicName { get; set; }
 
-		public string ArabicJob_Title { get; set; }
+		//public string ArabicJob_Title { get; set; }
 		public string Job_Title { get; set; }
 		public IFormFile Resume { get; set; }
 		

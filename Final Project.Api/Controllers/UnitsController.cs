@@ -2,6 +2,7 @@
 using FinalProject.Core;
 using FinalProject.Core.Dtos.UnitDots;
 using FinalProject.Core.Models;
+using FinalProject.EF.Translation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 namespace FinalProject.Api.Controllers
@@ -12,47 +13,66 @@ namespace FinalProject.Api.Controllers
 	{
 		private readonly IUnitOfWork _unitOfWork;
 		private readonly IConfiguration _configuration;
+		private readonly TranslationService _translationService;
 
-		public UnitController(IUnitOfWork unitOfWork,IConfiguration configuration)
+		public UnitController(IUnitOfWork unitOfWork,IConfiguration configuration, TranslationService translationService)
 		{
 			_unitOfWork = unitOfWork;
 			this._configuration = configuration;
+			this._translationService = translationService;
 		}
 
 		// POST: api/Unit
 		[Authorize(Roles = "Admin")]
-		[HttpPost]
-		public async Task<ActionResult<bool>> Create(UnitCreateDto unitDto)
+		[HttpPost("{lang}")]
+		public async Task<ActionResult<bool>> Create(string lang, UnitCreateDto unitDto)
 		{
-			if (unitDto == null)
-				return BadRequest("Invalid unit data.");
-
-			//var headOfUnit =await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == unitDto.Head_Of_UnitId);
-			//if (headOfUnit == null)
-			//    return BadRequest("Head of unit not found.");
-
-			//var employees =await _unitOfWork.Employees.GetAllAsync(e => unitDto.EmployeeIds.Contains(e.EmployeeId));
-			//if (employees == null )
-			//    return BadRequest("Employees not found.");
-
-			var unit = new Unit()
+			if (lang=="eng")
 			{
-				Name = unitDto.Name,
-				ArabicDescription = unitDto.ArabicDescription,
-				ArabicName = unitDto.ArabicName,
-				Description = unitDto.Description,
-
-			};
-
-			await _unitOfWork.Units.AddAsync(unit);
-
-			int res = await _unitOfWork.CompleteAsync();
-			if (res > 0)
-				return Ok(true);
-			return BadRequest("Failed to create unit.");
+				if (unitDto == null)
+					return BadRequest("Invalid unit data.");
 
 
-			//return CreatedAtAction(nameof(GetById), new { id = createdUnit.UnitId }, createdUnit);
+
+				var unit = new Unit()
+				{
+					Name = unitDto.Name,
+					ArabicName = await _translationService.TranslateLongTextAsync(unitDto.Name, "en", "ar"),
+					ArabicDescription = await _translationService.TranslateLongTextAsync(unitDto.Description, "en", "ar"),
+					Description = unitDto.Description,
+
+				};
+
+				await _unitOfWork.Units.AddAsync(unit);
+
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(true);
+				return BadRequest("Failed to create unit.");
+			}
+			else
+			{
+				if (unitDto == null)
+					return BadRequest("الوحده غير موجوده");
+
+
+
+				var unit = new Unit()
+				{
+					ArabicName = unitDto.Name,
+					Name = await _translationService.TranslateLongTextAsync(unitDto.Name, "ar", "en"),
+					Description = await _translationService.TranslateLongTextAsync(unitDto.Description, "ar", "en"),
+					ArabicDescription = unitDto.Description,
+
+				};
+
+				await _unitOfWork.Units.AddAsync(unit);
+
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(true);
+				return BadRequest("لم يتم عمل الوحده");
+			}
 		}
 
 		// GET: api/Unit/{id}
@@ -113,44 +133,113 @@ namespace FinalProject.Api.Controllers
 			}
 		}
 
+		[HttpGet("Unit_All_Employees/{lang}")]
+		public async Task<ActionResult<IEnumerable<UnitEmployeeToReturnDto>>> GetAllEmployees(string lang)
+		{
+			var employees = await _unitOfWork.UnitEmployees.GetAllAsync(null, new[] { "Unit" });
+			if (lang == "eng")
+			{
+				return Ok(employees.Select(x=> new UnitEmployeeToReturnDto
+				{
+					Id=x.Id,
+					Job_Title=x.Job_Title,
+					Name=x.Name,
+					Resume=x.Resume,
+					UnitId=x.UnitId,
+					UnitName=x.Unit.Name,
+
+				}));
+			}
+			else
+			{
+				return Ok(employees.Select(x => new UnitEmployeeToReturnDto
+				{
+					Id = x.Id,
+					Job_Title = x.ArabicJob_Title,
+					Name = x.ArabicName,
+					Resume = x.Resume,
+					UnitId = x.UnitId,
+					UnitName = x.Unit.ArabicName,
+
+				}));
+			}
+		}
+
+
+		[HttpGet("Unit_All_Courses/{lang}")]
+		public async Task<ActionResult<IEnumerable<UnitCoursesToRetrunDto>>> GetAllCourses(string lang)
+		{
+			var courses = await _unitOfWork.UnitCourses.GetAllAsync(null, new[] { "unit" });
+			if (lang == "eng")
+			{
+				return Ok(courses.Select(x => new UnitCoursesToRetrunDto
+				{
+					Id = x.Id,
+					PdfDescription = x.PdfDescription,
+					Title = x.Title,
+					UnitId= x.UnitId,
+					UnitName=x.unit.Name,
+					
+					
+				}));
+			}
+			else
+			{
+				return Ok(courses.Select(x => new UnitCoursesToRetrunDto
+				{
+					Id = x.Id,
+					PdfDescription = x.PdfDescription,
+					Title = x.ArabicTitle,
+					UnitId = x.UnitId,
+					UnitName = x.unit.ArabicName,
+
+
+				}));
+			}
+		}
+
 		// PUT: api/Unit/
 		[Authorize(Roles = "Admin")]
-		[HttpPut("{id}")]
-		public async Task<ActionResult<Unit?>> Update(int id, [FromBody] UnitUpdateDto unitDto)
+		[HttpPut("{id}/{lang}")]
+		public async Task<ActionResult<Unit?>> Update(int id,string lang, [FromBody] UnitCreateDto unitDto)
 		{
 
-			var headOfUnit = await _unitOfWork.Employees.GetByIdAsync(e => e.EmployeeId == id);
-			if (headOfUnit == null)
-				return BadRequest("Head of unit not found.");
+			if (lang=="eng")
+			{
+				var unit = await _unitOfWork.Units.GetByIdAsync(u => u.UnitId == id);
+				if (unit == null)
+					return NotFound("Unit not found");
 
+				unit.Name = unitDto.Name;
+				unit.ArabicName = await _translationService.TranslateLongTextAsync(unitDto.Name, "en", "ar");
+				unit.ArabicDescription = await _translationService.TranslateLongTextAsync(unitDto.Description, "en", "ar");
+				unit.Description = unitDto.Description;
 
+				_unitOfWork.Units.Update(unit);
 
-			//var employees = await _unitOfWork.Employees.GetAllAsync(e => unitDto.EmployeeIds.Contains(e.EmployeeId));
-			//if (employees == null)
-			//    return BadRequest("Employees not found.");
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(unit);
+				return BadRequest("Unit Update operation failed");
+			}
+			else
+			{
+				var unit = await _unitOfWork.Units.GetByIdAsync(u => u.UnitId == id);
+				if (unit == null)
+					return NotFound("الوحده غير موجوده");
 
+				unit.ArabicName = unitDto.Name;
+				unit.Name = await _translationService.TranslateLongTextAsync(unitDto.Name, "ar", "en");
+				unit.Description = await _translationService.TranslateLongTextAsync(unitDto.Description, "ar", "en");
+				unit.ArabicDescription = unitDto.Description;
 
+				_unitOfWork.Units.Update(unit);
 
-			var unit = await _unitOfWork.Units.GetByIdAsync(u => u.UnitId == unitDto.UnitId);
-			if (unit == null)
-				return NotFound("Unit not found");
-
-
-			unit.UnitId = unitDto.UnitId;
-			unit.Name = unitDto.Name;
-			unit.ArabicName = unitDto.ArabicName;
-			unit.ArabicDescription = unitDto.ArabicDescription;
-			unit.Description = unitDto.Description;
-
-
-
-
-			_unitOfWork.Units.Update(unit);
-
-			int res = await _unitOfWork.CompleteAsync();
-			if (res > 0)
-				return Ok(unit);
-			return BadRequest("Unit Update operation failed");
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(unit);
+				return BadRequest("لم يتم تعديل الوحده");
+			}
 
 		}
 		
@@ -171,28 +260,55 @@ namespace FinalProject.Api.Controllers
 			return BadRequest("Unit delete operation failed");
 		}
 		[Authorize(Roles = "Admin")]
-		[HttpPost("/Add_Emloyee_To_Unit/{unitId}")]
-		public async Task<ActionResult<bool>> AddEmployeeToUnit(int unitId, AddEmployeeToUnitDto input)
+		[HttpPost("/Add_Emloyee_To_Unit/{unitId}/{lang}")]
+		public async Task<ActionResult<bool>> AddEmployeeToUnit(int unitId,string lang, AddEmployeeToUnitDto input)
 		{
-			var unit = await _unitOfWork.Units.GetByIdAsync(x => x.UnitId == unitId);
-			if (unit == null) return BadRequest("No Unit Created ");
-			var employee = new UnitEmployees
+			if (lang=="eng")
 			{
-				UnitId = unitId,
-				ArabicName = input.ArabicName,
-				Name = input.Name,
-				ArabicJob_Title = input.ArabicJob_Title,
-				Job_Title = input.Job_Title,
-				Unit = unit,
-			};
-			employee.Resume = FileMangment.UploadFile(input.Resume, _configuration);
-			if (employee.Resume == null)
-				return BadRequest("Extention Or Size Not Valid For Cv");
-			await _unitOfWork.UnitEmployees.AddAsync(employee);
-			int res = await _unitOfWork.CompleteAsync();
-			if (res > 0)
-				return Ok(true);
-			return BadRequest("Failed to create Employee.");
+				var unit = await _unitOfWork.Units.GetByIdAsync(x => x.UnitId == unitId);
+				if (unit == null) return BadRequest("No Unit Created ");
+				var employee = new UnitEmployees
+				{
+					UnitId = unitId,
+					ArabicName = await _translationService.TranslateLongTextAsync(input.Name, "en", "ar"),
+					Name = input.Name,
+					ArabicJob_Title = await _translationService.TranslateLongTextAsync(input.Job_Title, "en", "ar"),
+					Job_Title = input.Job_Title,
+					Unit = unit,
+				};
+				unit.UnitEmployees?.Add(employee);
+				employee.Resume = FileMangment.UploadFile(input.Resume, _configuration);
+				if (employee.Resume == null)
+					return BadRequest("Extention Or Size Not Valid For Cv");
+				await _unitOfWork.UnitEmployees.AddAsync(employee);
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(true);
+				return BadRequest("Failed to create Employee.");
+			}
+			else
+			{
+				var unit = await _unitOfWork.Units.GetByIdAsync(x => x.UnitId == unitId);
+				if (unit == null) return BadRequest("لم يتم انشاء وحده");
+				var employee = new UnitEmployees
+				{
+					UnitId = unitId,
+					Name = await _translationService.TranslateLongTextAsync(input.Name, "ar", "en"),
+					ArabicName = input.Name,
+					Job_Title = await _translationService.TranslateLongTextAsync(input.Job_Title, "ar", "en"),
+					ArabicJob_Title = input.Job_Title,
+					Unit = unit,
+				};
+				unit.UnitEmployees?.Add(employee);
+				employee.Resume = FileMangment.UploadFile(input.Resume, _configuration);
+				if (employee.Resume == null)
+					return BadRequest("الحجم او الاضافه غير صحيح");
+				await _unitOfWork.UnitEmployees.AddAsync(employee);
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(true);
+				return BadRequest("لم يتم عمل موظف للوحده");
+			}
 		}
 		[Authorize(Roles = "Admin")]
 		[HttpPut("/Remove_Emloyee_From_Unit/{empId}")]
@@ -243,26 +359,51 @@ namespace FinalProject.Api.Controllers
 			}
 		}
 		[Authorize(Roles = "Admin")]
-		[HttpPost("/Add_Course_To_Unit/{unitId}")]
-		public async Task<ActionResult<bool>> AddCourseToUnit(int unitId, AddCourseToUnitDto input)
+		[HttpPost("/Add_Course_To_Unit/{unitId}/{lang}")]
+		public async Task<ActionResult<bool>> AddCourseToUnit(int unitId,string lang, AddCourseToUnitDto input)
 		{
-			var unit = await _unitOfWork.Units.GetByIdAsync(x => x.UnitId == unitId);
-			if (unit == null) return BadRequest("No Unit Created ");
-			var course = new UnitCourses
+			if (lang=="eng")
 			{
-				UnitId = unitId,
-				ArabicTitle = input.ArabicTitle,
-				Title = input.Title,
-				unit = unit,
-			};
-			course.PdfDescription = FileMangment.UploadFile(input.PdfDescription, _configuration);
-			if (course.PdfDescription == null)
-				return BadRequest("Extention Or Size Not Valid For Cv");
-			await _unitOfWork.UnitCourses.AddAsync(course);
-			int res = await _unitOfWork.CompleteAsync();
-			if (res > 0)
-				return Ok(true);
-			return BadRequest("Failed to create Employee.");
+				var unit = await _unitOfWork.Units.GetByIdAsync(x => x.UnitId == unitId);
+				if (unit == null) return BadRequest("No Unit Created ");
+				var course = new UnitCourses
+				{
+					UnitId = unitId,
+					ArabicTitle = await _translationService.TranslateLongTextAsync(input.Title, "en", "ar"),
+					Title = input.Title,
+					unit = unit,
+				};
+				unit.unitCourses.Add(course);
+				course.PdfDescription = FileMangment.UploadFile(input.PdfDescription, _configuration);
+				if (course.PdfDescription == null)
+					return BadRequest("Extention Or Size Not Valid For Cv");
+				await _unitOfWork.UnitCourses.AddAsync(course);
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(true);
+				return BadRequest("Failed to create Employee.");
+			}
+			else
+			{
+				var unit = await _unitOfWork.Units.GetByIdAsync(x => x.UnitId == unitId);
+				if (unit == null) return BadRequest("لم يتم انشاء وحده ");
+				var course = new UnitCourses
+				{
+					UnitId = unitId,
+					Title = await _translationService.TranslateLongTextAsync(input.Title, "ar", "en"),
+					ArabicTitle = input.Title,
+					unit = unit,
+				};
+				unit.unitCourses.Add(course);
+				course.PdfDescription = FileMangment.UploadFile(input.PdfDescription, _configuration);
+				if (course.PdfDescription == null)
+					return BadRequest("الحجم او الاضافه غير صحيح");
+				await _unitOfWork.UnitCourses.AddAsync(course);
+				int res = await _unitOfWork.CompleteAsync();
+				if (res > 0)
+					return Ok(true);
+				return BadRequest("لم يتم اضافه كورس للوحده");
+			}
 		}
 		[Authorize(Roles = "Admin")]
 		[HttpPut("/Remove_Course_From_Unit/{courseId}")]

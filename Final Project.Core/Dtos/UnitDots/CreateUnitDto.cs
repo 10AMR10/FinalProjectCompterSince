@@ -10,8 +10,8 @@ namespace FinalProject.Core.Dtos.UnitDots
     {
         //public int UnitId { get; set; }
         public string Name { get; set; }
-        public string ArabicName { get; set; }
-		public string ArabicDescription { get; set; }
+  //      public string ArabicName { get; set; }
+		//public string ArabicDescription { get; set; }
 		public string Description { get; set; }
 
 		//public int Head_Of_UnitId { get; set; } // Assuming the Head_Of_Unit is an Employee ID

@@ -7,6 +7,7 @@ using FinalProject.EF.Configuration;
 using FinalProject.EF.Identity;
 using FinalProject.EF.RepositoriesImplementation;
 using FinalProject.EF.Token;
+using FinalProject.EF.Translation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -86,7 +87,7 @@ namespace FinalProject.Api
 			});
 
 			builder.Services.AddScoped<ITokenService, TokenService>();
-
+			builder.Services.AddHttpClient<TranslationService>();
 			var app = builder.Build();
 
 			// Seeding Identity Data

@@ -10,6 +10,6 @@ namespace FinalProject.Core.Dtos.EmployeeDots
     public class EmployeeUpdateDto : EmployeeCreateDto
     {
         public int EmployeeId { get; set; }
-        public int DepartmentId { get; set; }
+        public int? DepartmentId { get; set; }
     }
 }

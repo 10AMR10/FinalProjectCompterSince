@@ -9,7 +9,9 @@ namespace FinalProject.Core.Dtos.QuailtyDtos
     public class AddQualityDto
     {
         public string Name { get; set; }
-        public string Description { get; set; }
+  //      public string ArabicName { get; set; }
+		//public string ArabicDescription { get; set; }
+		public string Description { get; set; }
 
-    }
+	}
 }

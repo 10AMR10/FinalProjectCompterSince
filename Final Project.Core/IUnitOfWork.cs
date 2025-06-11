@@ -25,7 +25,9 @@ namespace FinalProject.Core
         public IQualityRepository Qualities { get; }
 		public IUnitEmployeesRepository UnitEmployees { get; }
 		public IUnitCoursesRepositry UnitCourses{ get; }
-
+        public ILevelYearRepository LevelYears { get; set; }
+        public ICategoryRepositry Categories { get; set; }
+        public IServiceRepositry Services { get; set; }
 		int Complete();
         Task<int> CompleteAsync();
     }
